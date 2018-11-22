@@ -2,7 +2,7 @@
 
 <script type="text/javascript" src="//code.jquery.com/jquery-3.3.1.js"></script>
 <script type="text/javascript">
-navigator.serviceWorker.register("/push-demo/worker.js", {scope:"/push-demo"})
+navigator.serviceWorker.register("/push-demo/worker.js")
 	.then(reg => console.log("register " + reg))
 	.catch(err => console.warn("register " + err));
 $(() => {

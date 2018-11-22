@@ -1,2 +1,2 @@
-# push-demo
-Push Notifications for Web Applications
+# Push Notifications for Web Applications
+

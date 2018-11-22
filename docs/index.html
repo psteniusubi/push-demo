@@ -1,3 +1,24 @@
 <!DOCTYPE html>
 
-<h1>https://psteniusubi.github.io/push-demo</h1>
+<script type="text/javascript" src="//code.jquery.com/jquery-3.3.1.js"></script>
+<script type="text/javascript">
+$(() => $("#btn").click(() => {
+	var options = {
+		body: "Request A1B2C3\r\nsso.example.com",
+	};
+	var n = new Notification("Approve sign-in request A1B2C3", options); 
+	n.onclick = e => console.log("n.onclick " + JSON.stringify(e));
+}));
+$(function () {
+	Notification.requestPermission()
+		.then(permission => console.log(permission))
+		.catch(cause => console.warn(cause));
+});
+</script>
+
+<p>
+<input id="btn" type="button" value="Go"></input>
+</p>
+
+<p id="log">
+</p>

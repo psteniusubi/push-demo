@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+
+<script type="text/javascript" src="//code.jquery.com/jquery-3.3.1.js"></script>
+<script type="text/javascript">
+navigator.serviceWorker.register("/worker.js", {scope:"/"})
+	.then(reg => console.log("register " + reg))
+	.catch(err => console.warn("register " + reg));
+$(() => {
+	Notification.requestPermission()
+		.then(permission => console.log("requestPermission " + permission))
+		.catch(err => console.warn("requestPermission " + err));
+});
+$(() => $("#btn").click(evt => {
+	console.log("btn.click");
+	navigator.serviceWorker.controller.postMessage("hello");
+}));
+</script>
+
+<p>
+<input id="btn" type="button" value="Go"></input>
+</p>
+
+<p id="log"></p>

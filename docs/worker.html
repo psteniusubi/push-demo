@@ -2,7 +2,7 @@
 
 <script type="text/javascript" src="//code.jquery.com/jquery-3.3.1.js"></script>
 <script type="text/javascript">
-navigator.serviceWorker.register("/worker.js", {scope:"/"})
+navigator.serviceWorker.register("/push-demo/worker.js", {scope:"/push-demo"})
 	.then(reg => console.log("register " + reg))
 	.catch(err => console.warn("register " + err));
 $(() => {
@@ -17,7 +17,7 @@ $(() => $("#btn").click(evt => {
 </script>
 
 <p>
-<input id="btn" type="button" value="Go"></input>
+<input id="btn" type="button" value="Go" />
 </p>
 
 <p id="log"></p>

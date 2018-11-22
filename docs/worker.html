@@ -4,7 +4,7 @@
 <script type="text/javascript">
 navigator.serviceWorker.register("/worker.js", {scope:"/"})
 	.then(reg => console.log("register " + reg))
-	.catch(err => console.warn("register " + reg));
+	.catch(err => console.warn("register " + err));
 $(() => {
 	Notification.requestPermission()
 		.then(permission => console.log("requestPermission " + permission))

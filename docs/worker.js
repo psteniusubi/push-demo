@@ -24,9 +24,13 @@ self.addEventListener("notificationclick", event => {
 	console.log("notificationclick cancelable=" + event.cancelable);
 	console.log("notificationclick action=" + event.action);
 	console.log("notificationclick notification.data=" + JSON.stringify(event.notification.data));
-    var data = event.notification.data;
     event.notification.close(); 
-    event.waitUntil(clients.openWindow("https://psteniusubi.example.com/push-demo/authorize.html#" + data.subid + "/" + data.push_id));
+    var data = event.notification.data;
+    if(data && data.subid && data.push_id) {
+        var uri = location.origin + "/push-demo/authorize.html#" + data.subid + "/" + data.push_id;
+        console.log("openWindow " + uri);
+        event.waitUntil(clients.openWindow(uri));
+    }
 });
 self.addEventListener("push", event => {
 	console.log("push " + event);

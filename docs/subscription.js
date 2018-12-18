@@ -1,4 +1,4 @@
-var api_host = (location.hostname == "localhost") ? "http://localhost:5000" : "https://ubi-push-demo.azurewebsites.net";
+var api_host = (location.hostname == "psteniusubi.example.com") ? "http://localhost:5000" : "https://ubi-push-demo.azurewebsites.net";
 function get_service_info() {
     return fetch(api_host + "/service/info", { method: "GET" })
         .then(response => response.ok ? response.json() : Promise.reject(response));

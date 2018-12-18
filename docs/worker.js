@@ -35,16 +35,24 @@ self.addEventListener("notificationclick", event => {
 self.addEventListener("push", event => {
 	console.log("push " + event);
 	console.log("push.data " + event.data.text());
-	var n = self.registration.showNotification("Push", {
-		body:event.data.text(),
-        tag:"push-demo",
-		actions:[
-			{action:"Yes",title:"Yes"},
-			{action:"No",title:"No"}
-		],
-        data:event.data.json()
-	});
-	event.waitUntil(n);
+    if(false) {
+        var data = event.data.json();
+        var uri = location.origin + "/push-demo/authorize.html#" + data.subid + "/" + data.push_id;
+        console.log("openWindow " + uri);
+        event.waitUntil(clients.openWindow(uri));
+    } else {
+        var n = self.registration.showNotification("Push", {
+            body:event.data.text(),
+            tag:"push-demo",
+            requireInteraction:true,
+            data:event.data.json(),
+            actions:[
+                {action:"Yes",title:"Yes"},
+                {action:"No",title:"No"}
+            ]
+        });
+        event.waitUntil(n);
+    }
 });
 self.addEventListener("pushsubscriptionchange", event => {
 	console.log("pushsubscriptionchange " + event);

@@ -1,5 +1,6 @@
+var api_host = (location.hostname == "localhost") ? "http://localhost:5000" : "https://ubi-push-demo.azurewebsites.net";
 function get_service_info() {
-    return fetch("http://localhost:5000/service/info", { method: "GET" })
+    return fetch(api_host + "/service/info", { method: "GET" })
         .then(response => response.ok ? response.json() : Promise.reject(response));
 }
 function new_subscription(login_hint, subscription) {
@@ -8,31 +9,31 @@ function new_subscription(login_hint, subscription) {
         login_hint: login_hint,
         jwk: { kty: "RSA" }
     };
-    return fetch("http://localhost:5000/subscription", { method: "POST", body: JSON.stringify(request), headers: { "Content-Type": "application/json" }})
+    return fetch(api_host + "/subscription", { method: "POST", body: JSON.stringify(request), headers: { "Content-Type": "application/json" }})
         .then(response => response.ok ? response.json() : Promise.reject(response));
 }
 function get_subscription_by_login_hint(login_hint) {
-    return fetch("http://localhost:5000/subscription?login_hint=" + encodeURIComponent(login_hint), { method: "GET" })
+    return fetch(api_host + "/subscription?login_hint=" + encodeURIComponent(login_hint), { method: "GET" })
         .then(response => response.ok ? response.json() : Promise.reject(response));
 }
 function get_subscription(subid) {
-    return fetch("http://localhost:5000/subscription/" + encodeURIComponent(subid), { method: "GET" })
+    return fetch(api_host + "/subscription/" + encodeURIComponent(subid), { method: "GET" })
         .then(response => response.ok ? response.json() : Promise.reject(response));
 }
 function get_push_request_all(subid) {
-    return fetch("http://localhost:5000/subscription/" + encodeURIComponent(subid) + "/request", { method: "GET" })
+    return fetch(api_host + "/subscription/" + encodeURIComponent(subid) + "/request", { method: "GET" })
         .then(response => response.ok ? response.json() : Promise.reject(response));
 }
 function get_push_request(subid, push_id) {
-    return fetch("http://localhost:5000/subscription/" + encodeURIComponent(subid) + "/request/" + encodeURIComponent(push_id), { method: "GET" })
+    return fetch(api_host + "/subscription/" + encodeURIComponent(subid) + "/request/" + encodeURIComponent(push_id), { method: "GET" })
         .then(response => response.ok ? response.json() : Promise.reject(response));
 }
 function accept_push_request(subid, push_id) {
-    return fetch("http://localhost:5000/subscription/" + encodeURIComponent(subid) + "/request/" + encodeURIComponent(push_id), { method: "POST", headers: { "Content-Type": "application/json" }})
+    return fetch(api_host + "/subscription/" + encodeURIComponent(subid) + "/request/" + encodeURIComponent(push_id), { method: "POST", headers: { "Content-Type": "application/json" }})
         .then(response => response.ok ? Promise.resolve() : Promise.reject(response));
 }
 function reject_push_request(subid, push_id) {
-    return fetch("http://localhost:5000/subscription/" + encodeURIComponent(subid) + "/request/" + encodeURIComponent(push_id), { method: "DELETE" })
+    return fetch(api_host + "/subscription/" + encodeURIComponent(subid) + "/request/" + encodeURIComponent(push_id), { method: "DELETE" })
         .then(response => response.ok ? Promise.resolve() : Promise.reject(response));
 }
 

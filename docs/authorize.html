@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+<head>
+<script type="text/javascript" src="//code.jquery.com/jquery-3.3.1.js"></script>
+<script type="text/javascript" src="subscription.js"></script>
+<script type="text/javascript">
+var DOMContentLoaded = new Promise(resolve => window.addEventListener("DOMContentLoaded", e => resolve()));
+var tx = decode_location();
+DOMContentLoaded.then(() => $("#subscription_href").attr("href", "subscription.html#" + encode_location(tx.subid)));
+DOMContentLoaded.then(() => get_push_request(tx.subid, tx.push_id)
+    .then(json => {
+        $("#subid").text(json.subid);
+        $("#push_id").text(json.push_id);
+        $("#binding_message").text(json.binding_message);
+        $("#login_hint").text(json.login_hint);
+    }));
+DOMContentLoaded.then(() => $("#authorize").click(e => accept_push_request(tx.subid, tx.push_id)
+    .then(() => location.assign("subscription.html#" + encode_location(tx.subid)))));
+</script>
+</head>
+<body>
+
+<p>
+<a href="registration.html">registration</a>
+<a id="subscription_href">subscription</a>
+</p>
+
+<div>
+<p>
+Subscription: <span id="subid"></span>
+</p>
+<p>
+Request Id: <span id="push_id"></span>
+</p>
+<p>
+Binding Message: <span id="binding_message"></span>
+</p>
+<p>
+Login: <span id="login_hint"></span>
+</p>
+<p>
+<input id="authorize" type="button" value="Authorize" />
+</p>
+</div>
+
+</body>
+</html>

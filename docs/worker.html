@@ -2,6 +2,22 @@
 
 <script type="text/javascript" src="//code.jquery.com/jquery-3.3.1.js"></script>
 <script type="text/javascript">
+function atobUrlSafe(text) {
+    if (text == null) {
+        return null;
+    }
+    text = text
+        .replace(/\s+/g, "")
+        .replace(/_/g, "/")
+        .replace(/-/g, "+");
+    if (text.length === 0) {
+        return "";
+    }
+    text += "==".substr(0, (4 - text.length % 4) % 4);
+    return atob(text);
+}
+const KEY = "BPlec74CDe96yH7hanOdn9VN7HuBh_JG_Zfdx-h-Lr2aIl3Yar7noMOw2lY-gNw0-W9FRwOp6JcVgIbi16z-fo0";
+
 navigator.serviceWorker.register("/push-demo/worker.js")
 	.then(reg => console.log("register " + reg))
 	.catch(err => console.warn("register " + err));
@@ -10,14 +26,51 @@ $(() => {
 		.then(permission => console.log("requestPermission " + permission))
 		.catch(err => console.warn("requestPermission " + err));
 });
+
 $(() => $("#btn").click(evt => {
 	console.log("btn.click");
 	navigator.serviceWorker.controller.postMessage("hello");
+}));
+
+$(() => $("#sub").click(evt => {
+	console.log("sub.click");
+	navigator.serviceWorker.ready
+        .then(reg => reg.pushManager)
+        .then(pushManager => pushManager.subscribe({
+            userVisibleOnly:true,
+            applicationServerKey:Uint8Array.from(atobUrlSafe(KEY), t => t.charCodeAt(0))
+        }))
+        .then(pushSubscription => {
+            console.log("pushSubscription " + JSON.stringify(pushSubscription.toJSON()));
+        })
+        .catch(err => console.warn("pushSubscription " + err));
+}));
+
+$(() => $("#get").click(evt => {
+	console.log("get.click");
+	navigator.serviceWorker.ready
+        .then(reg => reg.pushManager)
+        .then(pushManager => pushManager.getSubscription() && Promise.reject())
+        .then(sub => console.log("pushSubscription " + sub));
+}));
+
+$(() => $("#unsub").click(evt => {
+	console.log("unsub.click");
+	navigator.serviceWorker.ready
+        .then(reg => reg.pushManager)
+        .then(pushManager => pushManager.getSubscription() && Promise.reject())
+        .then(sub => sub.unsubscribe());
 }));
 </script>
 
 <p>
 <input id="btn" type="button" value="Go" />
+</p>
+
+<p>
+<input id="sub" type="button" value="Sub" />
+<input id="get" type="button" value="Get" />
+<input id="unsub" type="button" value="Unsub" />
 </p>
 
 <p id="log"></p>

@@ -1,7 +1,10 @@
 var api_host = (location.hostname == "psteniusubi.example.com") ? "http://localhost:5000" : "https://ubi-push-demo.azurewebsites.net";
+function http_reject(response) {
+    return Promise.reject({error:"http_error",url:response.url,status:response.status});
+}
 function get_service_info() {
     return fetch(api_host + "/service/info", { method: "GET" })
-        .then(response => response.ok ? response.json() : Promise.reject(response));
+        .then(response => response.ok ? response.json() : http_reject(response));
 }
 function new_subscription(login_hint, subscription) {
     var request = {
@@ -10,31 +13,31 @@ function new_subscription(login_hint, subscription) {
         jwk: { kty: "RSA" }
     };
     return fetch(api_host + "/subscription", { method: "POST", body: JSON.stringify(request), headers: { "Content-Type": "application/json" }})
-        .then(response => response.ok ? response.json() : Promise.reject(response));
+        .then(response => response.ok ? response.json() : http_reject(response));
 }
 function get_subscription_by_login_hint(login_hint) {
     return fetch(api_host + "/subscription?login_hint=" + encodeURIComponent(login_hint), { method: "GET" })
-        .then(response => response.ok ? response.json() : Promise.reject(response));
+        .then(response => response.ok ? response.json() : http_reject(response));
 }
 function get_subscription(subid) {
     return fetch(api_host + "/subscription/" + encodeURIComponent(subid), { method: "GET" })
-        .then(response => response.ok ? response.json() : Promise.reject(response));
+        .then(response => response.ok ? response.json() : http_reject(response));
 }
 function get_push_request_all(subid) {
     return fetch(api_host + "/subscription/" + encodeURIComponent(subid) + "/request", { method: "GET" })
-        .then(response => response.ok ? response.json() : Promise.reject(response));
+        .then(response => response.ok ? response.json() : http_reject(response));
 }
 function get_push_request(subid, push_id) {
     return fetch(api_host + "/subscription/" + encodeURIComponent(subid) + "/request/" + encodeURIComponent(push_id), { method: "GET" })
-        .then(response => response.ok ? response.json() : Promise.reject(response));
+        .then(response => response.ok ? response.json() : http_reject(response));
 }
 function accept_push_request(subid, push_id) {
     return fetch(api_host + "/subscription/" + encodeURIComponent(subid) + "/request/" + encodeURIComponent(push_id), { method: "POST", headers: { "Content-Type": "application/json" }})
-        .then(response => response.ok ? Promise.resolve() : Promise.reject(response));
+        .then(response => response.ok ? Promise.resolve() : http_reject(response));
 }
 function reject_push_request(subid, push_id) {
     return fetch(api_host + "/subscription/" + encodeURIComponent(subid) + "/request/" + encodeURIComponent(push_id), { method: "DELETE" })
-        .then(response => response.ok ? Promise.resolve() : Promise.reject(response));
+        .then(response => response.ok ? Promise.resolve() : http_reject(response));
 }
 
 function decode_location() {

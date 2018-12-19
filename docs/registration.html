@@ -22,10 +22,15 @@ function do_subscribe(e) {
         })
         .then(pushManager => {
             console.log("pushManager " + pushManager); 
-            return info_promise.then(json => pushManager.subscribe({
-                userVisibleOnly:true,
-                applicationServerKey:Uint8Array.from(atobUrlSafe(json.applicationServerKey), t => t.charCodeAt(0))
-            }));
+            return info_promise
+                .then(json => pushManager.subscribe({
+                    userVisibleOnly:true,
+                    applicationServerKey:Uint8Array.from(atobUrlSafe(json.applicationServerKey), t => t.charCodeAt(0))
+                }))
+                .catch(error => {
+                    console.error("pushManager.subscribe " + error);
+                    return Promise.reject(error);
+                });
         })
         .then(pushSubscription => {
             console.log("pushSubscription " + JSON.stringify(pushSubscription.toJSON()));
@@ -34,6 +39,10 @@ function do_subscribe(e) {
         .then(json => {
             console.log(JSON.stringify(json)); 
             location.assign("subscription.html#" + encode_location(json.subid));
+        })
+        .catch(error => {
+            console.error("do_subscribe " + error);
+            $("#error").text("subscription failed: " + error);
         });
 }
 
@@ -50,6 +59,8 @@ Login: <input id="login_hint" type="text" value="hello@example.com" />
 <input id="ok" type="button" value="OK" />
 </p>
 </div>
+
+<div id="error" style="color:red"></div>
 
 </body>
 </html>

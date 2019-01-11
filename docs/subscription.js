@@ -57,18 +57,3 @@ function encode_location(subid, push_id) {
     if(!push_id) return id;
     return id + "/" + encodeURIComponent(push_id);
 }
-
-function atobUrlSafe(text) {
-    if (text == null) {
-        return null;
-    }
-    text = text
-        .replace(/\s+/g, "")
-        .replace(/_/g, "/")
-        .replace(/-/g, "+");
-    if (text.length === 0) {
-        return "";
-    }
-    text += "==".substr(0, (4 - text.length % 4) % 4);
-    return atob(text);
-}

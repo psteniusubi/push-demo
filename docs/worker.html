@@ -1,21 +1,8 @@
 <!DOCTYPE html>
 
 <script type="text/javascript" src="//code.jquery.com/jquery-3.3.1.js"></script>
+<script type="text/javascript" src="base64url.js"></script>
 <script type="text/javascript">
-function atobUrlSafe(text) {
-    if (text == null) {
-        return null;
-    }
-    text = text
-        .replace(/\s+/g, "")
-        .replace(/_/g, "/")
-        .replace(/-/g, "+");
-    if (text.length === 0) {
-        return "";
-    }
-    text += "==".substr(0, (4 - text.length % 4) % 4);
-    return atob(text);
-}
 const KEY = "BPlec74CDe96yH7hanOdn9VN7HuBh_JG_Zfdx-h-Lr2aIl3Yar7noMOw2lY-gNw0-W9FRwOp6JcVgIbi16z-fo0";
 
 navigator.serviceWorker.register("/push-demo/worker.js")

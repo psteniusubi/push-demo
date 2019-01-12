@@ -7,7 +7,8 @@ self.addEventListener("activate", event => {
 });
 self.addEventListener("message", event => {
 	console.log("message " + event);
-	console.log("message " + event.data);
+	//console.log("message " + JSON.stringify(event));
+	//console.log("message data: " + event.data);
     var request = JSON.parse(event.data);
     var n = self.registration.showNotification(request.title, request.options);
 	event.waitUntil(n);
@@ -22,7 +23,16 @@ self.addEventListener("notificationclick", event => {
 	console.log("notificationclick notification.data=" + JSON.stringify(event.notification.data));
     event.notification.close(); 
     var data = event.notification.data;
-    if(data && data.subid && data.push_id) {
+    if(data && data.client) {        
+        console.log("postMessage");
+        self.clients.matchAll().then(clients => {
+            console.log("matchAll.then()");
+            clients.forEach(client => {
+                console.log("forEach " + client);
+                client.postMessage("jeejee");
+            });
+        });
+    } else if(data && data.subid && data.push_id) {
         var uri = location.origin + "/push-demo/authorize.html#" + data.subid + "/" + data.push_id;
         console.log("openWindow " + uri);
         event.waitUntil(clients.openWindow(uri));

@@ -13,6 +13,10 @@ $(() => {
     navigator.serviceWorker.register("/push-demo/worker.js")
         .then(reg => $("#worker-status").removeAttr("style").text("serviceWorker.register(): " + JSON.stringify(reg)))
         .catch(err => $("#worker-status").attr("style", "color:red;").text("serviceWorker.register(): " + JSON.stringify(err)));
+    navigator.serviceWorker.addEventListener("message", e => {
+        console.log("serviceWorker.message " + e);
+        $("#notification-status").text("serviceWorker.message: " + e.data);
+    });
 });
     
 $(() => $("#permission").click(() => {
@@ -23,19 +27,24 @@ $(() => $("#permission").click(() => {
 }));
 
 $(() => $("#notification").click(evt => {
-    $("#notification-click").removeAttr("style").text("");
+    $("#notification-status").removeAttr("style").text("");
     var request = {
         title:"Sign-in request",
         options: {
             body: "Request A1B2C3\r\njohn.doe@example.com",
             icon: "/push-demo/256.png",
             badge: "/push-demo/256bw.png",
-            tag: location.origin        
+            tag: location.origin,
+            data: { client:true }
         }
     };
-    console.log(JSON.stringify(request));
 	navigator.serviceWorker.controller.postMessage(JSON.stringify(request));
 }));
+
+window.addEventListener("message", e => {
+    console.log("window.message " + e);
+    $("#notification-status").text("window.message: " + e.data);
+}, false);
 
 $(() => $("#sub").click(evt => {
 	console.log("sub.click");
@@ -83,7 +92,7 @@ $(() => $("#unsub").click(evt => {
 <input id="notification" type="button" value="Show Notification" />
 </div>
 
-<p id="notification-click"></p>
+<p id="notification-status"></p>
 
 <p>
 <input id="sub" type="button" value="Sub" />

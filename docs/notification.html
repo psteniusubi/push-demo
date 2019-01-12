@@ -20,7 +20,10 @@ $(() => $("#notification").click(() => {
         tag: location.origin
 	};
 	var n = new Notification(title, options); 
-	n.onclick = e => $("#notification-click").text("Notification.onclick(): " + JSON.stringify(e));
+	n.onclick = e => {
+        $("#notification-click").text("Notification.onclick(): " + JSON.stringify(e));
+        n.close();
+    };
 }));
 </script>
 </head>

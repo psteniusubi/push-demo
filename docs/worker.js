@@ -7,13 +7,9 @@ self.addEventListener("activate", event => {
 });
 self.addEventListener("message", event => {
 	console.log("message " + event);
-	var n = self.registration.showNotification("Message", {
-		body:"body",
-		actions:[
-			{action:"Yes",title:"Yes"},
-			{action:"No",title:"No"}
-		],
-	});
+	console.log("message " + event.data);
+    var request = JSON.parse(event.data);
+    var n = self.registration.showNotification(request.title, request.options);
 	event.waitUntil(n);
 });
 self.addEventListener("notificationclose", event => {

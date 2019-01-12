@@ -1,22 +1,40 @@
 <!DOCTYPE html>
 
-<script type="text/javascript" src="//code.jquery.com/jquery-3.3.1.js"></script>
+<head>
+<meta name="viewport" content="initial-scale=1" />
+<link href="/push-demo/256.png" rel="icon" type="image/png" />
+<script type="text/javascript" src="https://code.jquery.com/jquery-3.3.1.js"></script>
 <script type="text/javascript" src="base64url.js"></script>
 <script type="text/javascript">
 const KEY = "BPlec74CDe96yH7hanOdn9VN7HuBh_JG_Zfdx-h-Lr2aIl3Yar7noMOw2lY-gNw0-W9FRwOp6JcVgIbi16z-fo0";
 
-navigator.serviceWorker.register("/push-demo/worker.js")
-	.then(reg => console.log("register " + reg))
-	.catch(err => console.warn("register " + err));
 $(() => {
-	Notification.requestPermission()
-		.then(permission => console.log("requestPermission " + permission))
-		.catch(err => console.warn("requestPermission " + err));
+    $("#worker-status").removeAttr("style").text("");
+    navigator.serviceWorker.register("/push-demo/worker.js")
+        .then(reg => $("#worker-status").removeAttr("style").text("serviceWorker.register(): " + JSON.stringify(reg)))
+        .catch(err => $("#worker-status").attr("style", "color:red;").text("serviceWorker.register(): " + JSON.stringify(err)));
 });
+    
+$(() => $("#permission").click(() => {
+    $("#permission-status").removeAttr("style").text("");
+	Notification.requestPermission()
+		.then(permission => $("#permission-status").removeAttr("style").text("Notification.requestPermission(): " + permission))
+		.catch(cause => $("#permission-status").attr("style", "color:red;").text("Notification.requestPermission(): " + cause));
+}));
 
-$(() => $("#btn").click(evt => {
-	console.log("btn.click");
-	navigator.serviceWorker.controller.postMessage("hello");
+$(() => $("#notification").click(evt => {
+    $("#notification-click").removeAttr("style").text("");
+    var request = {
+        title:"Sign-in request",
+        options: {
+            body: "Request A1B2C3\r\njohn.doe@example.com",
+            icon: "/push-demo/256.png",
+            badge: "/push-demo/256bw.png",
+            tag: location.origin        
+        }
+    };
+    console.log(JSON.stringify(request));
+	navigator.serviceWorker.controller.postMessage(JSON.stringify(request));
 }));
 
 $(() => $("#sub").click(evt => {
@@ -49,10 +67,23 @@ $(() => $("#unsub").click(evt => {
         .then(sub => sub.unsubscribe());
 }));
 </script>
+</head>
 
-<p>
-<input id="btn" type="button" value="Go" />
-</p>
+<body>
+
+<p id="worker-status"></p>
+
+<div>
+<input id="permission" type="button" value="Request Permission" />
+</div>
+
+<p id="permission-status"></p>
+
+<div>
+<input id="notification" type="button" value="Show Notification" />
+</div>
+
+<p id="notification-click"></p>
 
 <p>
 <input id="sub" type="button" value="Sub" />
@@ -61,3 +92,5 @@ $(() => $("#unsub").click(evt => {
 </p>
 
 <p id="log"></p>
+
+</body>

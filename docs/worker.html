@@ -35,45 +35,49 @@ $(() => $("#notification").click(evt => {
             icon: "/push-demo/256.png",
             badge: "/push-demo/256bw.png",
             tag: location.origin,
-            data: { client:true }
+            data: { client: true }
         }
     };
 	navigator.serviceWorker.controller.postMessage(JSON.stringify(request));
 }));
 
+/*
 window.addEventListener("message", e => {
     console.log("window.message " + e);
     $("#notification-status").text("window.message: " + e.data);
 }, false);
+*/
 
 $(() => $("#sub").click(evt => {
 	console.log("sub.click");
 	navigator.serviceWorker.ready
         .then(reg => reg.pushManager)
         .then(pushManager => pushManager.subscribe({
-            userVisibleOnly:true,
-            applicationServerKey:Uint8Array.from(atobUrlSafe(KEY), t => t.charCodeAt(0))
+            userVisibleOnly: true,
+            applicationServerKey: Uint8Array.from(atobUrlSafe(KEY), t => t.charCodeAt(0))
         }))
-        .then(pushSubscription => {
-            console.log("pushSubscription " + JSON.stringify(pushSubscription.toJSON()));
+        .then(sub => {
+            console.log("pushSubscription " + JSON.stringify(sub.toJSON()));
         })
-        .catch(err => console.warn("pushSubscription " + err));
+        .catch(err => console.warn("subscribe " + err));
 }));
 
 $(() => $("#get").click(evt => {
 	console.log("get.click");
 	navigator.serviceWorker.ready
         .then(reg => reg.pushManager)
-        .then(pushManager => pushManager.getSubscription() && Promise.reject())
-        .then(sub => console.log("pushSubscription " + sub));
+        .then(pushManager => pushManager.getSubscription())
+        .then(sub => console.log("getSubscription " + (sub != null ? JSON.stringify(sub.toJSON()) : "n/a")))
+        .catch(error => console.error("getSubscription " + error));
 }));
 
 $(() => $("#unsub").click(evt => {
 	console.log("unsub.click");
 	navigator.serviceWorker.ready
         .then(reg => reg.pushManager)
-        .then(pushManager => pushManager.getSubscription() && Promise.reject())
-        .then(sub => sub.unsubscribe());
+        .then(pushManager => pushManager.getSubscription())
+        .then(sub => (sub != null) ? sub.unsubscribe() : null)
+        .catch(error => console.error("unsubscribe " + error));
 }));
 </script>
 </head>
@@ -95,9 +99,9 @@ $(() => $("#unsub").click(evt => {
 <p id="notification-status"></p>
 
 <p>
-<input id="sub" type="button" value="Sub" />
-<input id="get" type="button" value="Get" />
-<input id="unsub" type="button" value="Unsub" />
+<input id="sub" type="button" value="pushManager.subscribe" />
+<input id="get" type="button" value="pushManager.getSubscription" />
+<input id="unsub" type="button" value="Subscription.unsubscribe" />
 </p>
 
 <p id="log"></p>

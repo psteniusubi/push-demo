@@ -31,11 +31,20 @@ $(() => $("#notification").click(evt => {
     var request = {
         title:"Sign-in request",
         options: {
-            body: "Request A1B2C3\r\njohn.doe@example.com",
+            body: "Request A1B2C3 from ciba-client.ps1\r\njohn.doe@example.com",
             icon: "/push-demo/256.png",
             badge: "/push-demo/256bw.png",
             tag: location.origin,
-            data: { client: true }
+            actions: [
+                { action: "show", title: "Show" },
+                { action: "reject", title: "Reject" }
+            ],
+            data: { 
+                fromClient: true, 
+                openWindow: false,
+                focus: false,
+                fetch: true
+            }
         }
     };
 	navigator.serviceWorker.controller.postMessage(JSON.stringify(request));
@@ -50,6 +59,7 @@ window.addEventListener("message", e => {
 
 $(() => $("#sub").click(evt => {
 	console.log("sub.click");
+    $("#subscription-status").text("");
 	navigator.serviceWorker.ready
         .then(reg => reg.pushManager)
         .then(pushManager => pushManager.subscribe({
@@ -57,22 +67,30 @@ $(() => $("#sub").click(evt => {
             applicationServerKey: Uint8Array.from(atobUrlSafe(KEY), t => t.charCodeAt(0))
         }))
         .then(sub => {
-            console.log("pushSubscription " + JSON.stringify(sub.toJSON()));
+            var s = JSON.stringify(sub.toJSON(), null, 2);
+            $("#subscription-status").text(s);
+            console.log("pushSubscription " + s);
         })
         .catch(err => console.warn("subscribe " + err));
 }));
 
 $(() => $("#get").click(evt => {
 	console.log("get.click");
+    $("#subscription-status").text("");
 	navigator.serviceWorker.ready
         .then(reg => reg.pushManager)
         .then(pushManager => pushManager.getSubscription())
-        .then(sub => console.log("getSubscription " + (sub != null ? JSON.stringify(sub.toJSON()) : "n/a")))
+        .then(sub => {
+            var s = (sub != null) ? JSON.stringify(sub.toJSON(), null, 2) : "n/a";
+            $("#subscription-status").text(s);
+            console.log("getSubscription " + s);
+        })
         .catch(error => console.error("getSubscription " + error));
 }));
 
 $(() => $("#unsub").click(evt => {
 	console.log("unsub.click");
+    $("#subscription-status").text("");
 	navigator.serviceWorker.ready
         .then(reg => reg.pushManager)
         .then(pushManager => pushManager.getSubscription())
@@ -80,6 +98,9 @@ $(() => $("#unsub").click(evt => {
         .catch(error => console.error("unsubscribe " + error));
 }));
 </script>
+<style type="text/css">
+p#subscription-status { white-space: pre; }
+</style>
 </head>
 
 <body>
@@ -104,6 +125,6 @@ $(() => $("#unsub").click(evt => {
 <input id="unsub" type="button" value="Subscription.unsubscribe" />
 </p>
 
-<p id="log"></p>
+<p id="subscription-status"></p>
 
 </body>

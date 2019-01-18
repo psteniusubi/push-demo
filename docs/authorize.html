@@ -11,22 +11,84 @@ var tx = decode_location();
 DOMContentLoaded.then(() => $("#subscription_href").attr("href", "subscription.html#" + encode_location(tx.subid)));
 DOMContentLoaded.then(() => get_push_request(tx.subid, tx.push_id)
     .then(json => {
+        document.title = "Request " + json.binding_message + " from " + json.client_name;
         $("#subid").text(json.subid);
         $("#push_id").text(json.push_id);
         $("#binding_message").text(json.binding_message);
         $("#login_hint").text(json.login_hint);
-    }));
-DOMContentLoaded.then(() => $("#authorize").click(e => accept_push_request(tx.subid, tx.push_id)
-    .then(() => location.assign("subscription.html#" + encode_location(tx.subid)))));
+        $("#client_name").text(json.client_name);
+    })
+    .catch(error => location.assign("subscription.html#" + encode_location(tx.subid)))
+);
+DOMContentLoaded.then(() => $("#authorize").click(
+        e => accept_push_request(tx.subid, tx.push_id).then(() => { 
+            //window.close(); 
+            location.assign("subscription.html#" + encode_location(tx.subid));
+        })
+    )
+    //.then(() => location.assign("subscription.html#" + encode_location(tx.subid))))    
+);
+DOMContentLoaded.then(() => $("#reject").click(
+        e => reject_push_request(tx.subid, tx.push_id).then(() => {
+            //window.close(); 
+            location.assign("subscription.html#" + encode_location(tx.subid));
+        })
+    )
+    //.then(() => location.assign("subscription.html#" + encode_location(tx.subid))))
+);
 </script>
+<style type="text/css">
+body {
+    font-family: sans-serif;
+}
+input#authorize, input#reject {
+    font-size: large;
+}
+span#binding_message, span#client_name, span#login_hint {
+    font-weight: bold;
+}
+h1 {
+    font-size: large;
+}
+</style>
 </head>
 <body>
 
+<!--
 <p>
 <a href="registration.html">registration</a>
 <a id="subscription_href">subscription</a>
 </p>
+-->
 
+<table>
+<tr>
+<td>
+<img src="256.png" style="height:4em;"/>
+</td>
+<td>
+<h1>
+Sign-in request
+</h1>
+<p>
+Request <span id="binding_message"></span> from <span id="client_name"></span>
+</p>
+<p>
+<span id="login_hint"></span>
+</p>
+</td>
+</tr>
+<tr>
+<td colspan="2" align="center">
+<p>
+<input id="authorize" type="button" value="Authorize" />
+<input id="reject" type="button" value="Reject" />
+</p>
+</td>
+</tr>
+</table>
+
+<!--
 <div>
 <p>
 Subscription: <span id="subid"></span>
@@ -41,9 +103,10 @@ Binding Message: <span id="binding_message"></span>
 Login: <span id="login_hint"></span>
 </p>
 <p>
-<input id="authorize" type="button" value="Authorize" />
+Client Name: <span id="client_name"></span>
 </p>
 </div>
+-->
 
 </body>
 </html>

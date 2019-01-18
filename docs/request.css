@@ -1,0 +1,9 @@
+.registration, .subscription {
+    display:none;
+}
+tr.request {
+    display:table-row;
+}
+td.request {
+    display:table-cell;
+}

@@ -40,6 +40,10 @@ function reject_push_request(subid, push_id) {
         .then(response => response.ok ? Promise.resolve() : http_reject(response));
 }
 
+function empty_location() {
+    return { subid: null, push_id: null };
+}
+
 function decode_location() {
     if(location.hash.startsWith("#")) {
         var t = location.hash.substring(1).split("/");
@@ -47,7 +51,7 @@ function decode_location() {
             ? { subid: decodeURIComponent(t[0]), push_id: decodeURIComponent(t[1]) }        
             : { subid: decodeURIComponent(t[0]), push_id: null };
     } else {
-        return { subid: null, push_id: null };
+        return empty_location();
     }
 }
 

@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="initial-scale=1" />
+<link href="256.png" rel="icon" type="image/png" />
+<link href="style.css" rel="stylesheet" />
+<link href="" rel="stylesheet" id="controller" />
+<script type="text/javascript" src="https://code.jquery.com/jquery-3.3.1.js"></script>
+<script type="text/javascript" src="base64url.js"></script>
+<script type="text/javascript" src="subscription.js"></script>
+<script type="text/javascript">
+var DOMContentLoaded = new Promise(resolve => window.addEventListener("DOMContentLoaded", e => resolve()));
+var serviceWorker_promise = navigator.serviceWorker.register("/push-demo/worker.js")
+    .then(reg => console.log("register worker.js " + reg))
+    .catch(error => console.error("register worker.js " + error));
+
+var tx = decode_location();
+window.addEventListener("hashchange", e => {
+    tx = decode_location();
+    page_refresh();
+});
+
+function page_refresh() {
+    $("#controller").attr("href", "empty.css");
+    if(!tx.subid) {
+        var subid = localStorage.getItem("subid");
+        if(subid) {            
+            location.hash = encode_location(subid);
+        }
+    }
+    if(tx.subid) {
+        if(tx.push_id) {
+            get_push_request(tx.subid, tx.push_id)
+                .then(json => request_show(json))
+                .catch(error => location.hash = encode_location(tx.subid));
+        } else {
+            get_subscription(tx.subid)
+                .then(json => {
+                    localStorage.setItem("subid", json.subid);
+                    subscription_show(json);
+                })
+                .catch(error => {
+                    if(error.status == 404) {
+                        localStorage.removeItem("subid");
+                        location.hash = encode_location();
+                    } else {
+                        tx = empty_location();
+                        error_show();
+                    }
+                });
+        }
+    } else {
+        registration_show();
+    }
+}
+function registration_show() {
+    document.title = "Registration";
+    $("#controller").attr("href", "registration.css");
+}
+function subscription_show(json) {
+    document.title = "Waiting";
+    $("#controller").attr("href", "subscription.css");
+}
+function request_show(json) {
+    document.title = "Request " + json.binding_message + " from " + json.client_name;
+    $(".request #binding_message").text(json.binding_message);
+    $(".request #login_hint").text(json.login_hint);
+    $(".request #client_name").text(json.client_name);
+    $("#controller").attr("href", "request.css");
+}
+function error_show(json) {
+    document.title = "Error";
+    $("#controller").attr("href", "error.css");
+}
+function do_registration(login_hint) {
+    var Notification_promise = Notification.requestPermission()
+        .then(permission => console.log("requestPermission " + permission))
+        .catch(error => console.error("requestPermission " + error));
+    var info_promise = get_service_info();
+    var pushManager_promise = navigator.serviceWorker.ready
+        .then(serviceWorkerRegistration => serviceWorkerRegistration.pushManager);
+    Promise.all([serviceWorker_promise, Notification_promise, info_promise, pushManager_promise])
+        .then(() => pushManager_promise)
+        .then(pushManager => {
+            return info_promise
+                .then(json => pushManager.subscribe({
+                    userVisibleOnly:true,
+                    applicationServerKey:Uint8Array.from(atobUrlSafe(json.applicationServerKey), t => t.charCodeAt(0))
+                }))
+        })
+        .then(pushSubscription => {
+            console.log("pushSubscription " + JSON.stringify(pushSubscription.toJSON()));
+            return new_subscription(login_hint, pushSubscription.toJSON());
+        })
+        .then(json => {
+            console.log("new_subscription " + JSON.stringify(json));
+            localStorage.setItem("subid", json.subid);
+            location.hash = encode_location(json.subid);
+        })
+        .catch(error => console.error("do_registration " + error));
+}
+function status_poll() {
+    console.log("status_poll " + JSON.stringify(tx));
+    var promise = Promise.resolve();
+    if(tx.subid) {
+        if(tx.push_id) {
+            promise = get_push_request(tx.subid, tx.push_id)
+                .then(json => request_show(json))
+                .catch(error => (location.hash = encode_location(tx.subid)));
+        } else {
+            promise = get_push_request_all(tx.subid)
+                .then(json => json.length > 0 ? (location.hash = encode_location(json[0].subid, json[0].push_id)) : true)
+                .catch(error => {
+                    if(error.status == 404) {
+                        localStorage.removeItem("subid");
+                        location.hash = encode_location();
+                    } else {
+                        tx = empty_location();
+                        error_show();
+                    }
+                });
+        }
+    } 
+    promise
+        .then(() => setTimeout(status_poll, 2000))
+        .catch(() => setTimeout(status_poll, 2000));    
+}
+function page_bind() {
+    $(".registration #register").click(e => {
+        var login_hint = $(".registration #login_hint").val();
+        do_registration(login_hint);
+    });
+    $(".request #authorize").click(e => {
+        accept_push_request(tx.subid, tx.push_id)
+            .then(() => location.hash = encode_location(tx.subid));
+    });
+    $(".request #reject").click(e => {
+        reject_push_request(tx.subid, tx.push_id)
+            .then(() => location.hash = encode_location(tx.subid));
+    });
+    status_poll();
+}
+DOMContentLoaded.then(() => page_bind());
+DOMContentLoaded.then(() => page_refresh());
+</script>
+</head>
+<body>
+
+<table>
+
+<tr>
+
+<td>
+<img src="256.png" style="height:4em;"/>
+</td>
+
+<td class="registration">
+    <h1>
+    Username
+    </h1>
+    <p>
+    <input type="text" id="login_hint" value="hello@example.com" />
+    </p>
+</td>
+
+<td class="subscription">
+    <h1>
+    Subscription
+    </h1>
+    <p>
+    Waiting for Sign-in request
+    </p>
+</td>
+
+<td class="request">
+    <h1>
+    Sign-in request
+    </h1>
+    <p>
+    Request <span id="binding_message"></span> from <span id="client_name"></span>
+    </p>
+    <p>
+    <span id="login_hint"></span>
+    </p>
+</td>
+
+</tr>
+
+<tr class="registration">
+    <td colspan="2" align="center">
+    <p>
+    <input id="register" type="button" value="Register" />
+    </p>
+    </td>
+</tr>
+
+<tr class="request">
+    <td colspan="2" align="center">
+    <p>
+    <input id="authorize" type="button" value="Authorize" />
+    <input id="reject" type="button" value="Reject" />
+    </p>
+    </td>
+</tr>
+
+</table>
+
+</body>
+</html>

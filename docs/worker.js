@@ -84,10 +84,10 @@ self.addEventListener("notificationclick", event => {
         var reject;
         if(event.action == "reject") {
             reject = reject_push_request(message.subid, message.push_id);
-            uri = location.origin + "/push-demo/subscription.html#" + encode_location(message.subid);
+            uri = location.origin + "/push-demo/application.html#" + encode_location(message.subid);
         } else {
             reject = Promise.resolve();
-            uri = location.origin + "/push-demo/authorize.html#" + encode_location(message.subid, message.push_id);
+            uri = location.origin + "/push-demo/application.html#" + encode_location(message.subid, message.push_id);
         }
         var navigate = self.clients.matchAll()
             .then(clients => {
@@ -114,7 +114,7 @@ self.addEventListener("push", event => {
 	console.log("push.data " + event.data.text());
     var message = event.data.json();
     if(false) {
-        var uri = location.origin + "/push-demo/authorize.html#" + message.subid + "/" + message.push_id;
+        var uri = location.origin + "/push-demo/application.html#" + encode_location(message.subid, message.push_id);
         console.log("openWindow " + uri);
         event.waitUntil(clients.openWindow(uri));
     } else {

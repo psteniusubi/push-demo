@@ -10,6 +10,6 @@ span#binding_message, span#client_addr, span#client_name, span#login_hint {
 h1 {
     font-size: large;
 }
-.registration, .subscription, .request {
+.registration, .subscription, .request, .error {
     display:none;
 }

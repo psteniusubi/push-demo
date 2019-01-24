@@ -62,7 +62,7 @@ function subscription_show(json) {
     $("#controller").attr("href", "subscription.css");
 }
 function request_show(json) {
-    document.title = "Request " + json.binding_message + " from " + json.client_name;
+    document.title = "Request " + json.binding_message + " to " + json.client_name;
     $(".request #binding_message").text(json.binding_message);
     $(".request #login_hint").text(json.login_hint);
     $(".request #client_addr").text(json.client_addr);
@@ -185,6 +185,15 @@ DOMContentLoaded.then(() => page_refresh());
     </p>
 </td>
 
+<td class="error">
+    <h1>
+    Error
+    </h1>
+    <p>
+    <span>Authentication service is not available</span>
+    </p>
+</td>
+
 </tr>
 
 <tr class="registration">
@@ -195,6 +204,9 @@ DOMContentLoaded.then(() => page_refresh());
     </td>
 </tr>
 
+<tr class="subscription">
+</tr>
+
 <tr class="request">
     <td colspan="2" align="center">
     <p>
@@ -202,6 +214,9 @@ DOMContentLoaded.then(() => page_refresh());
     <input id="reject" type="button" value="Reject" />
     </p>
     </td>
+</tr>
+
+<tr class="error">
 </tr>
 
 </table>

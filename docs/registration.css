@@ -1,4 +1,4 @@
-.request, .subscription {
+.request, .subscription, .error {
     display:none;
 }
 tr.registration {

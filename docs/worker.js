@@ -81,12 +81,12 @@ self.addEventListener("notificationclick", event => {
     } else if(data && data.message) {
         var message = data.message;
         var uri;
-        var reject;
+        var action;
         if(event.action == "reject") {
-            reject = reject_push_request(message.subid, message.push_id);
+            action = reject_push_request(message.subid, message.push_id);
             uri = location.origin + "/push-demo/application.html#" + encode_location(message.subid);
         } else {
-            reject = Promise.resolve();
+            action = Promise.resolve();
             uri = location.origin + "/push-demo/application.html#" + encode_location(message.subid, message.push_id);
         }
         var navigate = self.clients.matchAll()
@@ -102,7 +102,7 @@ self.addEventListener("notificationclick", event => {
                 }
                 return Promise.all(list);
             });
-        event.waitUntil(reject.then(() => navigate));
+        event.waitUntil(action.then(() => navigate));
     }
 }, false);
 
@@ -119,13 +119,17 @@ self.addEventListener("push", event => {
         event.waitUntil(clients.openWindow(uri));
     } else {
         var title = "Sign-in request";
+        var body = "Request " + message.binding_message;
+        if(message.client_addr) body += " from " + message.client_addr;
+        if(message.client_name) body += " to " + message.client_name;
+        body += "\r\n" + message.login_hint;
         var options = {
-            body: "Request " + message.binding_message + " from " + message.client_name + "\r\n" + message.login_hint,
+            body: body,
             icon: "/push-demo/256.png",
             badge: "/push-demo/256bw.png",
             tag: location.origin,
             actions: [
-                { action: "show", title: "Show" },
+                { action: "open", title: "Open" },
                 { action: "reject", title: "Reject" }
             ],
             data: {

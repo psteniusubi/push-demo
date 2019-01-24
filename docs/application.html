@@ -65,6 +65,7 @@ function request_show(json) {
     document.title = "Request " + json.binding_message + " from " + json.client_name;
     $(".request #binding_message").text(json.binding_message);
     $(".request #login_hint").text(json.login_hint);
+    $(".request #client_addr").text(json.client_addr);
     $(".request #client_name").text(json.client_name);
     $("#controller").attr("href", "request.css");
 }
@@ -177,7 +178,7 @@ DOMContentLoaded.then(() => page_refresh());
     Sign-in request
     </h1>
     <p>
-    Request <span id="binding_message"></span> from <span id="client_name"></span>
+    Request <span id="binding_message"></span> from <span id="client_addr"></span> to <span id="client_name"></span>
     </p>
     <p>
     <span id="login_hint"></span>

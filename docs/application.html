@@ -11,64 +11,14 @@
 <script type="text/javascript" src="subscription.js"></script>
 <script type="text/javascript">
 var DOMContentLoaded = new Promise(resolve => window.addEventListener("DOMContentLoaded", () => resolve()));
-var serviceWorker_promise = navigator.serviceWorker.register("/push-demo/worker.js")
+var serviceWorker_promise = navigator.serviceWorker.register("/push-demo/worker.js", { scope: "/push-demo/" })
     .then(reg => console.log("register worker.js " + reg))
     .catch(error => console.error("register worker.js " + error));
 
-var tx = decode_location();
-
-window.addEventListener("hashchange", () => {
-    tx = decode_location();
-    page_refresh();
-});
-
-function page_refresh() {
-    if(!tx.subid) {
-        var subid = localStorage.getItem("subid");
-        if(subid) {
-            console.log("page_refresh() -> localStorage[subid] = " + subid);
-            location.hash = encode_location(subid);
-            return Promise.resolve();
-        }
-    }
-    if(tx.subid) {
-        if(tx.push_id) {
-            return get_push_request(tx.subid, tx.push_id)
-                .then(json => request_show(json))
-                .catch(error => location.hash = encode_location(tx.subid));
-        } else {
-            return get_subscription(tx.subid)
-                .then(json => {
-                    localStorage.setItem("subid", json.subid);
-                    subscription_show(json);
-                })
-                .catch(error => {
-                    if(error.status == 404) {
-                        console.error("get_subscription: 404");
-                        localStorage.removeItem("subid");
-                        location.hash = encode_location();
-                    } else {
-                        console.error("get_subscription: " + error);
-                        error_show();
-                    }
-                });
-        }
-    } else {
-        return get_service_info()
-            .then(() => {
-                console.log("page_refresh() -> registration_show()");
-                registration_show();
-            })
-            .catch(error => {
-                console.error("get_service_info: " + error);
-                error_show();
-            });
-    }
-}
 function registration_show() {
     $("#controller").attr("href", "registration.css");
 }
-function subscription_show(json) {
+function subscription_show() {
     $("#controller").attr("href", "subscription.css");
 }
 function request_show(json) {
@@ -78,9 +28,84 @@ function request_show(json) {
     $(".request #client_name").text(json.client_name);
     $("#controller").attr("href", "request.css");
 }
-function error_show(json) {
+function error_show() {
     $("#controller").attr("href", "error.css");
 }
+
+function page_load() {
+    var tx = decode_location();
+    if(!tx.subid) {
+        var subid = localStorage.getItem("subid");
+        if(subid) {
+            return get_subscription(subid)
+                .then(json => {
+                    location.hash = encode_location(json.subid); // hashchange -> subscription_show
+                    return Promise.resolve(null);
+                })
+                .catch(error => {
+                    if(error.status == 404) {
+                        localStorage.removeItem("subid");
+                    }
+                    return Promise.resolve(tx);
+                });
+        }
+    }
+    return Promise.resolve(tx);
+}
+
+function page_refresh(tx) {
+    if(tx && tx.subid) {
+        if(tx.push_id) {
+            return get_push_request(tx.subid, tx.push_id)
+                .then(json => request_show(json))
+                .catch(error => {
+                    console.error("get_push_request " + error);
+                    location.hash = encode_location(tx.subid); // hashchange -> subscription_show
+                }); 
+        } else {
+            return get_push_request_all(tx.subid)
+                .then(json => json.length > 0 
+                    ? (location.hash = encode_location(json[0].subid, json[0].push_id)) //  hashchange -> request_show
+                    : subscription_show()) // subscription_show
+                .catch(error => {
+                    console.error("get_push_request_all " + error);
+                    if(error.status == 404) {
+                        location.hash = encode_location(); // hashchange -> registration_show
+                    } else {
+                        error_show();
+                    }
+                });
+        }
+    } else {
+        return get_service_info()
+            .then(() => registration_show())
+            .catch(error => {
+                console.error("get_service_info " + error);
+                error_show();
+            });
+    }
+}
+
+window.addEventListener("hashchange", () => {
+    page_load()
+        .then(tx => tx ? page_refresh(tx) : null);
+});
+
+DOMContentLoaded
+    .then(() => page_load())
+    .then(tx => tx ? page_refresh(tx) : null);
+
+function status_poll() {
+    var tx = decode_location();
+    page_refresh(tx);
+}
+
+DOMContentLoaded
+    .then(() => setInterval(status_poll, 2000));
+
+/**
+ * Handle registration click
+ */
 function do_registration(login_hint) {
     var Notification_promise = Notification.requestPermission()
         .then(permission => console.log("requestPermission " + permission))
@@ -89,13 +114,13 @@ function do_registration(login_hint) {
     var pushManager_promise = navigator.serviceWorker.ready
         .then(serviceWorkerRegistration => serviceWorkerRegistration.pushManager);
     Promise.all([serviceWorker_promise, Notification_promise, info_promise, pushManager_promise])
-        .then(() => pushManager_promise)
-        .then(pushManager => {
-            return info_promise
-                .then(json => pushManager.subscribe({
-                    userVisibleOnly:true,
-                    applicationServerKey:Uint8Array.from(atobUrlSafe(json.applicationServerKey), t => t.charCodeAt(0))
-                }))
+        .then(all => {
+            var info = all[2];
+            var pushManager = all[3];
+            return pushManager.subscribe({
+                userVisibleOnly:true,
+                applicationServerKey:Uint8Array.from(atobUrlSafe(info.applicationServerKey), t => t.charCodeAt(0))
+            });
         })
         .then(pushSubscription => {
             console.log("pushSubscription " + JSON.stringify(pushSubscription.toJSON()));
@@ -111,53 +136,33 @@ function do_registration(login_hint) {
             error_show();
         });
 }
-function status_poll() {
-    var promise = Promise.resolve();
-    if(tx.subid) {
-        if(tx.push_id) {
-            console.log("status_poll() -> get_push_request " + JSON.stringify(tx));
-            promise = page_refresh();
-        } else {
-            console.log("status_poll() -> get_push_request_all " + JSON.stringify(tx));
-            promise = get_push_request_all(tx.subid)
-                .then(json => json.length > 0 ? (location.hash = encode_location(json[0].subid, json[0].push_id)) : true)
-                .catch(error => {
-                    if(error.status == 404) {
-                        console.error("get_push_request_all 404");
-                        localStorage.removeItem("subid");
-                        location.hash = encode_location();
-                    } else {
-                        console.error("get_push_request_all " + error);
-                        error_show();
-                    }
-                });
-        }
-    } else {
-        promise = page_refresh();
-    }
-    return promise
-        .then(() => setTimeout(status_poll, 2000))
-        .catch(() => setTimeout(status_poll, 2000));    
-}
+
+/**
+ * Bind event listeners
+ * Invoked once during page load
+ */ 
 function page_bind() {
     $(".registration #register").click(e => {
         var login_hint = $(".registration #login_hint").val();
         do_registration(login_hint);
     });
     $(".request #authorize").click(e => {
+        var tx = decode_location();
         accept_push_request(tx.subid, tx.push_id)
             .then(() => location.hash = encode_location(tx.subid));
     });
     $(".request #reject").click(e => {
+        var tx = decode_location();
         reject_push_request(tx.subid, tx.push_id)
             .then(() => location.hash = encode_location(tx.subid));
     });
     return Promise.resolve();
 }
-DOMContentLoaded
-    .then(() => page_bind())
-    .then(() => page_refresh())
-    .then(() => status_poll());
+/**
+ * Bind event listeners
+ */
+DOMContentLoaded.then(() => page_bind());
+
 </script>
 </head>
 <body>

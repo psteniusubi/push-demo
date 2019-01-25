@@ -40,21 +40,22 @@ function reject_push_request(subid, push_id) {
         .then(response => response.ok ? Promise.resolve() : http_reject(response));
 }
 
-function empty_location() {
-    return { subid: null, push_id: null };
+function new_location(subid, push_id) {
+    return { subid: subid, push_id: push_id};
 }
-
+function empty_location() {
+    return new_location(null, null);
+}
 function decode_location() {
     if(location.hash.startsWith("#")) {
         var t = location.hash.substring(1).split("/");
         return (t.length > 1) 
-            ? { subid: decodeURIComponent(t[0]), push_id: decodeURIComponent(t[1]) }        
-            : { subid: decodeURIComponent(t[0]), push_id: null };
+            ? new_location(decodeURIComponent(t[0]), decodeURIComponent(t[1]))
+            : new_location(decodeURIComponent(t[0]), null);
     } else {
         return empty_location();
     }
 }
-
 function encode_location(subid, push_id) {
     if(!subid) return "";
     var id = encodeURIComponent(subid);

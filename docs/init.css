@@ -1,6 +1,6 @@
-tr.subscription {
+tr.init {
     display:table-row;
 }
-td.subscription {
+td.init {
     display:table-cell;
 }

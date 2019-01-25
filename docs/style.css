@@ -1,15 +1,9 @@
 body {
     font-family: sans-serif;
 }
-input#authorize, input#reject {
-    font-size: large;
-}
-span#binding_message, span#client_addr, span#client_name, span#login_hint {
-    font-weight: bold;
-}
 h1 {
     font-size: large;
 }
-.registration, .subscription, .request, .error {
+.init, .registration, .subscription, .request, .error {
     display:none;
 }

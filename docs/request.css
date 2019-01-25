@@ -1,9 +1,12 @@
-.registration, .subscription, .error {
-    display:none;
-}
 tr.request {
     display:table-row;
 }
 td.request {
     display:table-cell;
+}
+span#binding_message, span#client_addr, span#client_name, span#login_hint {
+    font-weight: bold;
+}
+input#authorize, input#reject {
+    font-size: large;
 }

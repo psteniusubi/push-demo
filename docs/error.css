@@ -1,13 +1,9 @@
-.registration, .subscription, .request {
-    display:none;
-}
 tr.error {
     display:table-row;
 }
 td.error {
     display:table-cell;
 }
-
 td.error span {
     color: red;
 }

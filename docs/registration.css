@@ -1,9 +1,9 @@
-.request, .subscription, .error {
-    display:none;
-}
 tr.registration {
     display:table-row;
 }
 td.registration {
     display:table-cell;
+}
+input#register {
+    font-size: large;
 }

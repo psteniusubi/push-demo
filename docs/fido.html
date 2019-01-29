@@ -7,10 +7,12 @@
 <script type="text/javascript" src="base64url.js"></script>
 <script type="text/javascript">
 var DOMContentLoaded = new Promise(resolve => window.addEventListener("DOMContentLoaded", () => resolve()));
+DOMContentLoaded.then(() => existingKey());
 DOMContentLoaded.then(() => $("#generateKey").click(generateKey));
 DOMContentLoaded.then(() => $("#sign").click(sign));
 DOMContentLoaded.then(() => $("#register").click(register));
 DOMContentLoaded.then(() => $("#authenticate").click(authenticate));
+
 const S256 = { name: "SHA-256" };
 const RS256 = {
     name: "RSASSA-PKCS1-v1_5",
@@ -18,42 +20,110 @@ const RS256 = {
     publicExponent: new Uint8Array([1, 0, 1]),
     hash: S256
 };
+
+function exportKey(publicKey) {
+	return crypto.subtle.exportKey("jwk", publicKey)
+        .then(jwk => JSON.stringify(jwk, 0, 2));
+}
+
+function getKey() {
+    var db_promise = db_open("crypto");
+    var get_promise = db_promise.then(db => db_get(db, "KeyPair", 0));
+    var key_promise = get_promise.then(item => item ? ( {publicKey: item.publicKey, privateKey: item.privateKey} ) : Promise.reject("KeyPairNotFound"));
+	return Promise.all([db_promise, key_promise])
+		.then(all => {
+			db_close(all[0]);
+			return Promise.resolve(all[1]);
+		});
+}
+
+function existingKey() {
+	var key_promise = getKey();
+	key_promise.then(keyPair => exportKey(keyPair.publicKey))
+        .then(jwk => $("#jwk").text(jwk));
+}
+
 function generateKey() {
     var db_promise = db_delete("crypto")
         .then(() => db_create("crypto", db => db.createObjectStore("KeyPair", { keyPath: "id" })));
     var key_promise = crypto.subtle.generateKey(RS256, false, ["sign", "verify"]);
-    var jwk_promise = key_promise.then(key => crypto.subtle.exportKey("jwk", key.publicKey))
-        .then(jwk => $("#jwk").text(JSON.stringify(jwk, 0, 2)));
+    var jwk_promise = key_promise.then(keyPair => exportKey(keyPair.publicKey))
+        .then(jwk => $("#jwk").text(jwk));
     var put_promise = Promise.all([db_promise, key_promise])
         .then(all => db_put(all[0], "KeyPair", { id: 0, publicKey: all[1].publicKey, privateKey: all[1].privateKey }))
         .then(db_close);
     Promise.all([db_promise, key_promise, jwk_promise, put_promise])
         .catch(error => console.error("generateKey " + error));
 }
-function utf8(n) {
-    n = n & 0xff;
-    if(n & 0x80) {
-        return String.fromCharCode(0xc0 | ((n >> 6) & 0x3), 0x80 | (n & 0x3f));
-    } else {
-        return String.fromCharCode(n);
-    }
-}
+
 function sign() {
-    var db_promise = db_open("crypto");
-    var get_promise = db_promise.then(db => db_get(db, "KeyPair", 0));
-    var key_promise = get_promise.then(item => item ? item.privateKey : Promise.reject("KeyPairNotFound"));
-    var sign_promise = key_promise
-        .then(privateKey => crypto.subtle.sign(RS256, privateKey, new Uint8Array(32)))
-//        .then(signature => console.log("sign " + btoaUrlSafe(new Uint8Array(signature).map(t => utf8(t)).join(""))));
-//        .then(signature => console.log("sign " + new Uint8Array(signature).map(t => String.fromCharCode(t & 0xff)).join("")));
-//        .then(signature => console.log("sign " + new Uint8Array(signature)));
-        .then(signature => console.log("sign " + btoaUrlSafe(Array.from(new Uint8Array(signature), t => String.fromCharCode(t)).join(""))));
-    Promise.all([db_promise, get_promise, key_promise, sign_promise])
-        .then(all => db_close(all[0]))
-        .catch(error => console.error("sign " + error));
+	$("#signature").text("");
+    return getKey()
+        .then(keyPair => crypto.subtle.sign(RS256, keyPair.privateKey, new Uint8Array(32)))
+        .then(signature => $("#signature").text(btoaUrlSafe(Array.from(new Uint8Array(signature), t => String.fromCharCode(t)).join(""))));	
 }
+
+function getRandomChallenge() {
+	var array = new Uint8Array(32);
+	crypto.getRandomValues(array);
+	return Promise.resolve(array);
+}
+
+var credentialsResponse;
+var authenticatorAttestationResponse;
+
+function encodeArray(array) {
+	return btoaUrlSafe(Array.of(new Uint8Array(array), t => String.fromCharCode(t)));
+}
+
 function register() {
+	var challenge_promise = getRandomChallenge();
+	var rpid = new Uint8Array(8);
+	var userid = new Uint8Array(8);
+	var name = "hello@example.com";
+	var createParams_promise = challenge_promise.then(challenge => ({
+		"publicKey": {
+			"rp":{
+				"name":location.origin,
+			},
+			"user":{
+				"id":userid,
+				"name":name,
+				"displayName":name,
+			},
+			"challenge":challenge,
+			"pubKeyCredParams":[ 
+				{type: "public-key", alg: -7},
+				{type: "public-key", alg: -257},
+			],
+			"timeout":10000,
+			"excludeCredentials":[],
+			"authenticatorSelection":{
+				//"authenticatorAttachment":"platform",
+				//"requireResidentKey":false,
+				//"userVerification":"preferred",
+			},
+			"attestation":"direct",
+		}
+	}));
+	//createParams_promise.then(createParams => console.log(JSON.stringify(createParams)));
+	var create_promise = createParams_promise.then(createParams => navigator.credentials.create(createParams));
+	create_promise
+		.then(cred => ({
+			id: cred.id,
+			type: cred.type,
+			rawId: encodeArray(cred.rawId),
+			response: {
+				clientDataJSON: encodeArray(cred.response.clientDataJSON),
+				attestationObject: encodeArray(cred.response.attestationObject),
+			},
+		}))
+		.then(obj => $("#authenticatorAttestationResponse").text(JSON.stringify(obj, 0, 2)))
+		.catch(e => console.error("credentials.create " + e));
+	create_promise.then(cred => credentialsResponse = cred);
+	create_promise.then(cred => authenticatorAttestationResponse = cred.response);
 }
+
 function authenticate() {
 }
 </script>
@@ -78,6 +148,10 @@ function authenticate() {
 
 <p>
 <input id="register" value="register" type="button" />
+</p>
+
+<p>
+<textarea id="authenticatorAttestationResponse" rows="8" cols="80"></textarea>
 </p>
 
 <p>

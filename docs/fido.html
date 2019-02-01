@@ -3,65 +3,12 @@
 <head>
 <title>fido.html</title>
 <script type="text/javascript" src="https://code.jquery.com/jquery-3.3.1.js"></script>
-<script type="text/javascript" src="db.js"></script>
+<script type="text/javascript" src="cbor.js"></script>
 <script type="text/javascript" src="base64url.js"></script>
 <script type="text/javascript">
 var DOMContentLoaded = new Promise(resolve => window.addEventListener("DOMContentLoaded", () => resolve()));
-DOMContentLoaded.then(() => existingKey());
-DOMContentLoaded.then(() => $("#generateKey").click(generateKey));
-DOMContentLoaded.then(() => $("#sign").click(sign));
 DOMContentLoaded.then(() => $("#register").click(register));
 DOMContentLoaded.then(() => $("#authenticate").click(authenticate));
-
-const S256 = { name: "SHA-256" };
-const RS256 = {
-    name: "RSASSA-PKCS1-v1_5",
-    modulusLength: 2048,
-    publicExponent: new Uint8Array([1, 0, 1]),
-    hash: S256
-};
-
-function exportKey(publicKey) {
-	return crypto.subtle.exportKey("jwk", publicKey)
-        .then(jwk => JSON.stringify(jwk, 0, 2));
-}
-
-function getKey() {
-    var db_promise = db_open("crypto");
-    var get_promise = db_promise.then(db => db_get(db, "KeyPair", 0));
-    var key_promise = get_promise.then(item => item ? ( {publicKey: item.publicKey, privateKey: item.privateKey} ) : Promise.reject("KeyPairNotFound"));
-	return Promise.all([db_promise, key_promise])
-		.then(all => {
-			db_close(all[0]);
-			return Promise.resolve(all[1]);
-		});
-}
-
-function existingKey() {
-	var key_promise = getKey();
-	key_promise.then(keyPair => exportKey(keyPair.publicKey))
-        .then(jwk => $("#jwk").text(jwk));
-}
-
-function generateKey() {
-    var db_promise = db_delete("crypto")
-        .then(() => db_create("crypto", db => db.createObjectStore("KeyPair", { keyPath: "id" })));
-    var key_promise = crypto.subtle.generateKey(RS256, false, ["sign", "verify"]);
-    var jwk_promise = key_promise.then(keyPair => exportKey(keyPair.publicKey))
-        .then(jwk => $("#jwk").text(jwk));
-    var put_promise = Promise.all([db_promise, key_promise])
-        .then(all => db_put(all[0], "KeyPair", { id: 0, publicKey: all[1].publicKey, privateKey: all[1].privateKey }))
-        .then(db_close);
-    Promise.all([db_promise, key_promise, jwk_promise, put_promise])
-        .catch(error => console.error("generateKey " + error));
-}
-
-function sign() {
-	$("#signature").text("");
-    return getKey()
-        .then(keyPair => crypto.subtle.sign(RS256, keyPair.privateKey, new Uint8Array(32)))
-        .then(signature => $("#signature").text(btoaUrlSafe(Array.from(new Uint8Array(signature), t => String.fromCharCode(t)).join(""))));	
-}
 
 function getRandomChallenge() {
 	var array = new Uint8Array(32);
@@ -70,7 +17,9 @@ function getRandomChallenge() {
 }
 
 var credentialsResponse;
+
 var authenticatorAttestationResponse;
+var authenticatorAssertionResponse;
 
 function encodeArray(array) {
 	return btoaUrlSafe(Array.of(new Uint8Array(array), t => String.fromCharCode(t)));
@@ -78,13 +27,13 @@ function encodeArray(array) {
 
 function register() {
 	var challenge_promise = getRandomChallenge();
-	var rpid = new Uint8Array(8);
-	var userid = new Uint8Array(8);
 	var name = "hello@example.com";
+	var userid = Uint8Array.from(name, t => t.charCodeAt(0));
 	var createParams_promise = challenge_promise.then(challenge => ({
 		"publicKey": {
 			"rp":{
 				"name":location.origin,
+				"id":location.host,
 			},
 			"user":{
 				"id":userid,
@@ -96,7 +45,7 @@ function register() {
 				{type: "public-key", alg: -7},
 				{type: "public-key", alg: -257},
 			],
-			"timeout":10000,
+			"timeout":30000,
 			"excludeCredentials":[],
 			"authenticatorSelection":{
 				//"authenticatorAttachment":"platform",
@@ -125,26 +74,37 @@ function register() {
 }
 
 function authenticate() {
+	var challenge_promise = getRandomChallenge();
+	var requestParams_promise = challenge_promise.then(challenge => ({
+		"publicKey": {
+			"challenge":challenge,
+			"timeout":30000,
+			"rpId":location.host,
+			//"allowCredentials":[],
+			//"userVerification":"preferred",
+		}
+	}));
+	var request_promise = requestParams_promise.then(requestParams => navigator.credentials.get(requestParams));
+	request_promise
+		.then(cred => ({
+			id: cred.id,
+			type: cred.type,
+			rawId: encodeArray(cred.rawId),
+			response: {
+				clientDataJSON: encodeArray(cred.response.clientDataJSON),
+				authenticatorData: encodeArray(cred.response.authenticatorData),
+				signature: encodeArray(cred.response.signature),
+				userHandle: encodeArray(cred.response.userHandle),
+			},
+		}))
+		.then(obj => $("#authenticatorAssertionResponse").text(JSON.stringify(obj, 0, 2)))
+		.catch(e => console.error("credentials.get " + e));
+	request_promise.then(cred => credentialsResponse = cred);
+	request_promise.then(cred => authenticatorAssertionResponse = cred.response);
 }
 </script>
 </head>
 <body>
-
-<p>
-<input id="generateKey" value="generateKey" type="button" />
-</p>
-
-<p>
-<textarea id="jwk" rows="8" cols="80"></textarea>
-</p>
-
-<p>
-<input id="sign" value="sign" type="button" />
-</p>
-
-<p>
-<textarea id="signature" rows="8" cols="80"></textarea>
-</p>
 
 <p>
 <input id="register" value="register" type="button" />
@@ -156,6 +116,10 @@ function authenticate() {
 
 <p>
 <input id="authenticate" value="authenticate" type="button" />
+</p>
+
+<p>
+<textarea id="authenticatorAssertionResponse" rows="8" cols="80"></textarea>
 </p>
 
 </body>

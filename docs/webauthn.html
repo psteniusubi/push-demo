@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-<title>fido.html</title>
+<title>webauthn.html</title>
 <script type="text/javascript" src="https://code.jquery.com/jquery-3.3.1.js"></script>
 <script type="text/javascript" src="cbor.js"></script>
 <script type="text/javascript" src="base64url.js"></script>
@@ -28,6 +28,7 @@ function encodeArray(array) {
 function register() {
 	var challenge_promise = getRandomChallenge();
 	var name = "hello@example.com";
+	var displayName = "Hello Example";
 	var userid = Uint8Array.from(name, t => t.charCodeAt(0));
 	var createParams_promise = challenge_promise.then(challenge => ({
 		"publicKey": {
@@ -38,7 +39,7 @@ function register() {
 			"user":{
 				"id":userid,
 				"name":name,
-				"displayName":name,
+				"displayName":displayName,
 			},
 			"challenge":challenge,
 			"pubKeyCredParams":[ 
@@ -120,6 +121,10 @@ function authenticate() {
 
 <p>
 <textarea id="authenticatorAssertionResponse" rows="8" cols="80"></textarea>
+</p>
+
+<p>
+<a href="https://w3c.github.io/webauthn/">https://w3c.github.io/webauthn/</a>
 </p>
 
 </body>

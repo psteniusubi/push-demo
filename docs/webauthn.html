@@ -12,11 +12,14 @@ body {
 <script type="text/javascript" src="base64url.js"></script>
 <script type="text/javascript">
 var DOMContentLoaded = new Promise(resolve => window.addEventListener("DOMContentLoaded", () => resolve()));
+DOMContentLoaded.then(() => $("#register").click(register));
+DOMContentLoaded.then(() => $("#authenticate").click(authenticate));
 DOMContentLoaded.then(() => $("#rp\\.name").val(location.origin));
 DOMContentLoaded.then(() => $("#rp\\.id").val(location.host));
 DOMContentLoaded.then(() => $("#rpId").val(location.host));
-DOMContentLoaded.then(() => $("#register").click(register));
-DOMContentLoaded.then(() => $("#authenticate").click(authenticate));
+var isUserVerifyingPlatformAuthenticatorAvailable_promise = PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
+Promise.all([isUserVerifyingPlatformAuthenticatorAvailable_promise,DOMContentLoaded])
+	.then(all => $("#isUserVerifyingPlatformAuthenticatorAvailable").val(all[0]));
 
 function getSettings() {
 	var settings;
@@ -170,7 +173,6 @@ function register() {
 					{type: "public-key", alg: -257},
 				],
 				"timeout":30000,
-				"excludeCredentials":[],
 				"authenticatorSelection":authenticatorSelection,
 				"attestation":"none",
 			}
@@ -281,6 +283,18 @@ function authenticate() {
 <body>
 
 <table>
+
+<tr>
+<td>
+<div>
+<label for="isUserVerifyingPlatformAuthenticatorAvailable">isUserVerifyingPlatformAuthenticatorAvailable</label>
+<input id="isUserVerifyingPlatformAuthenticatorAvailable" type="text" value=""/>
+</div>
+</td>
+<td>
+<div><a href="https://w3c.github.io/webauthn/#dom-publickeycredential-isuserverifyingplatformauthenticatoravailable">isUserVerifyingPlatformAuthenticatorAvailable</a></div>
+</td>
+</tr>
 
 <tr>
 <td>

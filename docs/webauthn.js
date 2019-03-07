@@ -1,3 +1,9 @@
+function toBoolean(value) { 
+	if("true" == value) return true;
+	if("false" == value) return false;
+	return null;
+}
+
 function encodeArray(array) {
 	return btoaUrlSafe(Array.from(new Uint8Array(array), t => String.fromCharCode(t)).join(""));
 }
@@ -31,6 +37,16 @@ function replacer(k,v) {
 			clientDataJSON: v.clientDataJSON,
 			// https://w3c.github.io/webauthn/#authenticatorattestationresponse
 			attestationObject: v.attestationObject, 
+		};
+	}
+	if(v && v.constructor === AuthenticatorAssertionResponse) {
+		return {
+			// https://w3c.github.io/webauthn/#authenticatorresponse
+			clientDataJSON: v.clientDataJSON,
+			// https://w3c.github.io/webauthn/#authenticatorassertionresponse
+			authenticatorData: v.authenticatorData, 
+			signature: v.signature, 
+			userHandle: v.userHandle, 
 		};
 	}
 	return v;

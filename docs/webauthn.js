@@ -129,15 +129,41 @@ function sha256(data) {
 	return crypto.subtle.digest("SHA-256", data);
 }
 
+function convertSignature(publicKey, signature) {
+	if(publicKey.kty == "EC") {
+		/*
+			0x30|b1|0x02|b2|r|0x02|b3|s
+			b1 = Length of remaining data
+			b2 = Length of r
+			b3 = Length of s 
+		 */
+		var view = new DataView(signature);
+		var offset = 0;
+		if(view.getUint8(offset++) != 0x30) throw "Invalid argument";
+		var b1 = view.getUint8(offset++);
+		if(view.getUint8(offset++) != 0x02) throw "Invalid argument";
+		var b2 = view.getUint8(offset++);
+		offset += b2;
+		if(view.getUint8(offset++) != 0x02) throw "Invalid argument";
+		var b3 = view.getUint8(offset++);
+		return Promise.resolve(new Uint8Array());
+	} else {
+		return Promise.resolve(signature);
+	}
+}
+
 function verifyAssertionSignature(publicKeyCredential, publicKey) {	
-	delete publicKey.alg;
-	console.log("importKey: publicKey=" + JSON.stringify(publicKey));
 	var RS256 = {
-		name: "RSASSA-PKCS1-v1_5",
-		hash: { name: "SHA-256" },
+		"name": "RSASSA-PKCS1-v1_5",
+		"hash": { "name": "SHA-256" },
 	};
-	var ES256 = {"name":"ECDSA","namedCurve":"P-256","hash":{"name":"SHA-256"}};
+	var ES256 = {
+		"name":"ECDSA",
+		"namedCurve":"P-256",
+		"hash": { "name": "SHA-256" }
+	};
 	var ALG = (publicKey.kty == "EC") ? ES256 : RS256;
+
 	var key_promise = crypto.subtle.importKey("jwk", publicKey, ALG, false, ["verify"]);
 	
 	key_promise
@@ -150,23 +176,29 @@ function verifyAssertionSignature(publicKeyCredential, publicKey) {
 		.then(hash => console.log("sha256: return " + hash))
 		.catch(e => console.error("sha256:" + e));
 	
-	var tmp_promise = hash_promise.then(hash => {
-		var tmp = new Uint8Array(publicKeyCredential.response.authenticatorData.byteLength + hash.byteLength);
-		tmp.set(new Uint8Array(publicKeyCredential.response.authenticatorData), 0);
-		tmp.set(new Uint8Array(hash), publicKeyCredential.response.authenticatorData.byteLength);
-		return tmp;
+	var signed_promise = hash_promise.then(hash => {
+		var signed = new Uint8Array(publicKeyCredential.response.authenticatorData.byteLength + hash.byteLength);
+		signed.set(new Uint8Array(publicKeyCredential.response.authenticatorData), 0);
+		signed.set(new Uint8Array(hash), publicKeyCredential.response.authenticatorData.byteLength);
+		return signed;
 	});
 	
-	tmp_promise
-		.then(tmp => console.log("tmp: return " + tmp))
-		.catch(e => console.error("tmp:" + e));	
+	signed_promise
+		.then(signed => console.log("signed: return " + signed))
+		.catch(e => console.error("signed:" + e));
+		
+	signature_promise = convertSignature(publicKey, publicKeyCredential.response.signature);
+
+	signature_promise
+		.then(signature => console.log("signature: return " + signature))
+		.catch(e => console.error("signature:" + e));
 	
-	var verify_promise = Promise.all([key_promise,tmp_promise])
-		.then(all => {
-			return crypto.subtle.verify(ALG, all[0], publicKeyCredential.response.signature, all[1]);
-		});
+	var verify_promise = Promise.all([key_promise,signed_promise,signature_promise])
+		.then(all => crypto.subtle.verify(ALG, all[0], all[2], all[1]));
+
 	verify_promise
 		.then(value => console.log("verify: return " + value))
 		.catch(e => console.error("verify:" + e));
+
 	return verify_promise;
 }

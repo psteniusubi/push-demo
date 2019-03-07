@@ -10,6 +10,7 @@ body {
 <script type="text/javascript" src="https://code.jquery.com/jquery-3.3.1.js"></script>
 <script type="text/javascript" src="cbor.js"></script>
 <script type="text/javascript" src="base64url.js"></script>
+<script type="text/javascript" src="webauthn.js"></script>
 <script type="text/javascript">
 var DOMContentLoaded = new Promise(resolve => window.addEventListener("DOMContentLoaded", () => resolve()));
 DOMContentLoaded.then(() => $("#register").click(register));
@@ -70,66 +71,10 @@ function updateAllowCredentials() {
 
 DOMContentLoaded.then(() => updateAllowCredentials());
 
-function getRandomChallenge() {
-	var array = new Uint8Array(32);
-	crypto.getRandomValues(array);
-	return Promise.resolve(array);
-}
-
 var credentialsResponse;
 
 var authenticatorAttestationResponse;
 var authenticatorAssertionResponse;
-
-function encodeArray(array) {
-	return btoaUrlSafe(Array.from(new Uint8Array(array), t => String.fromCharCode(t)).join(""));
-}
-
-function replacer(k,v) {
-	if(v && v.constructor === Uint8Array) {
-		return encodeArray(v);
-	}
-	if(v && v.constructor === ArrayBuffer) {
-		return encodeArray(v);
-	}
-	return v;
-}
-
-function decodeAuthenticatorData(data) {
-	if(data.constructor === Uint8Array) {
-		data = data.buffer.slice(data.byteOffset, data.byteLength + data.byteOffset);
-	}
-	if(data.constructor !== ArrayBuffer) throw "Invalid argument: " + data.constructor;
-	var view = new DataView(data);
-	var offset = 0;
-	var rpIdHash = view.buffer.slice(offset, offset + 32); offset += 32;
-	var flags = view.getUint8(offset); offset += 1;
-	var signCount = view.getUint32(offset, false); offset += 4;
-	var authenticatorData = {
-		rpIdHash: rpIdHash,
-		flags: {
-			value: flags,
-			up: (flags & 0x01) != 0,
-			uv: (flags & 0x04) != 0,
-			at: (flags & 0x40) != 0,
-			ed: (flags & 0x80) != 0,
-		},
-		signCount: signCount,
-	};
-	// attestedCredentialData 
-	if(authenticatorData.flags.at) {
-		var aaguid = view.buffer.slice(offset, offset + 16); offset += 16;
-		var credentialIdLength = view.getUint16(offset, false); offset += 2;
-		var credentialId = view.buffer.slice(offset, offset + credentialIdLength); offset += credentialIdLength;
-		var credentialPublicKey = view.buffer.slice(offset);
-		authenticatorData.attestedCredentialData = {
-			aaguid: aaguid,
-			credentialId: credentialId,
-			credentialPublicKey: credentialPublicKey,
-		};
-	}
-	return authenticatorData;
-}
 
 function register() {
 	var challenge_promise = getRandomChallenge();

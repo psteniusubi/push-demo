@@ -103,7 +103,7 @@ function coseToJwk(data) {
 			if(!data[-2] || !data[-3]) throw "Invalid argument";
 			return {
 				"kty":"EC",
-				"alg":alg,
+				//"alg":alg,
 				"crv":crv,
 				"x":encodeArray(data[-2]),
 				"y":encodeArray(data[-3]),
@@ -117,10 +117,56 @@ function coseToJwk(data) {
 			if(!data[-1] || !data[-2]) throw "Invalid argument";
 			return {
 				"kty":"RSA",
-				"alg":alg,
+				//"alg":alg,
 				"n":encodeArray(data[-1]),
 				"e":encodeArray(data[-2]),
 			};
 		default: throw "Invalid argument";
 	}
+}
+
+function sha256(data) {
+	return crypto.subtle.digest("SHA-256", data);
+}
+
+function verifyAssertionSignature(publicKeyCredential, publicKey) {	
+	delete publicKey.alg;
+	console.log("importKey: publicKey=" + JSON.stringify(publicKey));
+	var RS256 = {
+		name: "RSASSA-PKCS1-v1_5",
+		hash: { name: "SHA-256" },
+	};
+	var ES256 = {"name":"ECDSA","namedCurve":"P-256","hash":{"name":"SHA-256"}};
+	var ALG = (publicKey.kty == "EC") ? ES256 : RS256;
+	var key_promise = crypto.subtle.importKey("jwk", publicKey, ALG, false, ["verify"]);
+	
+	key_promise
+		.then(key => console.log("importKey: return " + key))
+		.catch(e => console.error("importKey: error " + JSON.stringify(e)));
+	
+	var hash_promise = sha256(publicKeyCredential.response.clientDataJSON);
+	
+	hash_promise
+		.then(hash => console.log("sha256: return " + hash))
+		.catch(e => console.error("sha256:" + e));
+	
+	var tmp_promise = hash_promise.then(hash => {
+		var tmp = new Uint8Array(publicKeyCredential.response.authenticatorData.byteLength + hash.byteLength);
+		tmp.set(new Uint8Array(publicKeyCredential.response.authenticatorData), 0);
+		tmp.set(new Uint8Array(hash), publicKeyCredential.response.authenticatorData.byteLength);
+		return tmp;
+	});
+	
+	tmp_promise
+		.then(tmp => console.log("tmp: return " + tmp))
+		.catch(e => console.error("tmp:" + e));	
+	
+	var verify_promise = Promise.all([key_promise,tmp_promise])
+		.then(all => {
+			return crypto.subtle.verify(ALG, all[0], publicKeyCredential.response.signature, all[1]);
+		});
+	verify_promise
+		.then(value => console.log("verify: return " + value))
+		.catch(e => console.error("verify:" + e));
+	return verify_promise;
 }

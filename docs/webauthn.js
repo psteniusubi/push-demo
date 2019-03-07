@@ -143,10 +143,12 @@ function convertSignature(publicKey, signature) {
 		var b1 = view.getUint8(offset++);
 		if(view.getUint8(offset++) != 0x02) throw "Invalid argument";
 		var b2 = view.getUint8(offset++);
+		var r = view.buffer.slice(offset, offset+b2);
 		offset += b2;
 		if(view.getUint8(offset++) != 0x02) throw "Invalid argument";
 		var b3 = view.getUint8(offset++);
-		return Promise.resolve(new Uint8Array());
+		var s = view.buffer.slice(offset, offset+b3);
+		return Promise.resolve([r,s]);
 	} else {
 		return Promise.resolve(signature);
 	}

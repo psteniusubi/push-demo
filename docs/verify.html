@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>verify.html</title>
+<style type="text/css">
+body {
+	font-family: sans-serif;
+}
+.error {
+	color:red;
+}
+textarea {
+	white-space: pre;
+	word-wrap: normal;
+	word-break: normal;
+}
+</style>
+<script type="text/javascript" src="https://code.jquery.com/jquery-3.3.1.js"></script>
+<script type="text/javascript" src="base64url.js"></script>
+<script type="text/javascript" src="cbor.js"></script>
+<script type="text/javascript" src="webauthn.js"></script>
+<script type="text/javascript" src="settings.js"></script>
+<script type="text/javascript">
+var DOMContentLoaded = new Promise(resolve => window.addEventListener("DOMContentLoaded", () => resolve()));
+
+var settings = readSettings();
+
+function InitializeDisplay() {
+	$("#credentials").empty();
+	$("#credentials").append("<option>");
+	for(var i in settings.credentials) {
+		var cred = settings.credentials[i];
+		var o = $("<option>")
+			.attr({"value":cred.id})
+			.text(cred.instant);
+		$("#credentials").append(o);		
+	}
+	$("#credentials").bind("change", e => allowCredentials = $(e.target).val()).bind("change", UpdateDisplay);
+	$("#verify").bind("click", VerifySignature);
+}
+
+function UpdateDisplay() {
+	var id = $("#credentials").val();
+	if(id != "") {
+		for(var i in settings.credentials) {
+			var cred = settings.credentials[i];
+			if(cred.id == id) {
+				$("#credentialPublicKey").text(JSON.stringify(cred.credentialPublicKey, replacer, 2));
+			}
+		}
+	}
+}
+
+function VerifySignature() {
+	var json = JSON.parse($("#PublicKeyCredential").text());
+	var publicKeyCredential = {
+		"response":{
+			"clientDataJSON":Uint8Array.from(atobUrlSafe(json.response.clientDataJSON), t => t.charCodeAt(0)),
+			"authenticatorData":Uint8Array.from(atobUrlSafe(json.response.authenticatorData), t => t.charCodeAt(0)),
+			"signature":Uint8Array.from(atobUrlSafe(json.response.signature), t => t.charCodeAt(0)),
+		},
+	};
+	console.log(JSON.stringify(publicKeyCredential, replacer, 2));
+	var publicKey = JSON.parse($("#credentialPublicKey").text());
+	verifyAssertionSignature(publicKeyCredential, publicKey)
+		.catch(e => console.error("verifyAssertionSignature: error "+e))
+		.then(result => console.log("verifyAssertionSignature: returns "+result));
+}
+
+DOMContentLoaded.then(() => InitializeDisplay());
+</script>
+</head>
+<body>
+
+<table>
+<tr><td>credentials</td><td><select id="credentials"></select></td></tr>
+<tr><td>PublicKeyCredential</td></tr>
+<tr><td colspan="2"><textarea id="PublicKeyCredential" rows="12" cols="80"></textarea></td></tr>
+<tr><td>credentialPublicKey</td></tr>
+<tr><td colspan="2"><textarea id="credentialPublicKey" rows="7" cols="80"></textarea></td></tr>
+<tr><td><input id="verify" type="button" value="crypto.subtle.verify" /></td></tr>
+</table>
+
+</body>
+</html>

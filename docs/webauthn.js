@@ -137,18 +137,27 @@ function convertSignature(publicKey, signature) {
 			b2 = Length of r
 			b3 = Length of s 
 		 */
-		var view = new DataView(signature);
+		var rs = new Uint8Array(64);
+		var view = new DataView(signature.buffer);
 		var offset = 0;
 		if(view.getUint8(offset++) != 0x30) throw "Invalid argument";
 		var b1 = view.getUint8(offset++);
 		if(view.getUint8(offset++) != 0x02) throw "Invalid argument";
 		var b2 = view.getUint8(offset++);
-		var r = view.buffer.slice(offset, offset+b2);
+		if(b2 > 32) {
+			b2--;
+			offset++;
+		}
+		rs.set(new Uint8Array(view.buffer.slice(offset, offset+b2)), 0);
 		offset += b2;
 		if(view.getUint8(offset++) != 0x02) throw "Invalid argument";
 		var b3 = view.getUint8(offset++);
-		var s = view.buffer.slice(offset, offset+b3);
-		return Promise.resolve([r,s]);
+		if(b3 > 32) {
+			b3--;
+			offset++;
+		}
+		rs.set(new Uint8Array(view.buffer.slice(offset, offset+b3)), b2);
+		return Promise.resolve(rs);
 	} else {
 		return Promise.resolve(signature);
 	}

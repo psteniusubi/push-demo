@@ -37,6 +37,25 @@ function InitializeDisplay() {
 	}
 	$("#credentials").bind("change", e => allowCredentials = $(e.target).val()).bind("change", UpdateDisplay);
 	$("#verify").bind("click", VerifySignature);
+	var t1 = {
+  "id": "YPeJj0qC4vE3e1sOEA63X7FKzPaeEzZ-l4xIEyDZtbH2DCBOdiLRrC2JF-iNpvtM_9KUrEpEMd1Zl0agCznMFxVEkPG462xXFtnG9ycyok0",
+  "type": "public-key",
+  "rawId": "YPeJj0qC4vE3e1sOEA63X7FKzPaeEzZ-l4xIEyDZtbH2DCBOdiLRrC2JF-iNpvtM_9KUrEpEMd1Zl0agCznMFxVEkPG462xXFtnG9ycyok0",
+  "response": {
+    "clientDataJSON": "eyJjaGFsbGVuZ2UiOiIxajYxa3h5Q1ZxNnBCUW1HOVNyeTNzT0dON0tnWEh3OUsxTXBaYnVGbWRvIiwib3JpZ2luIjoiaHR0cHM6Ly9wc3Rlbml1c3ViaS5leGFtcGxlLmNvbSIsInR5cGUiOiJ3ZWJhdXRobi5nZXQifQ",
+    "authenticatorData": "xB02IEA79xrFLbaG8udc2PodExfmvC5K0iZCgpfgfTQBAAAAHw",
+    "signature": "MEUCIQC3ikvpj9X4ZCMEeYs9WateXP1q0yCy9GoOZpLeMLN8TgIgDSx5WwhrSBj884FLLXVW9ceJNxaoKkmrXGa77gUQPys",
+    "userHandle": ""
+  }
+};
+	var t2 = {
+  "kty": "EC",
+  "crv": "P-256",
+  "x": "hBvSXynj6RqRXMx1e9rDKErsVmRrasr00xtM95m-XUo",
+  "y": "SErWtXaIYCaBfbii9wsGyY_N7lSV3hQquuhxBOMlwLs"
+};
+	$("#PublicKeyCredential").text(JSON.stringify(t1, null, 2));
+	$("#credentialPublicKey").text(JSON.stringify(t2, null, 2));
 }
 
 function UpdateDisplay() {
@@ -45,14 +64,15 @@ function UpdateDisplay() {
 		for(var i in settings.credentials) {
 			var cred = settings.credentials[i];
 			if(cred.id == id) {
-				$("#credentialPublicKey").text(JSON.stringify(cred.credentialPublicKey, replacer, 2));
+				$("#credentialPublicKey").val(JSON.stringify(cred.credentialPublicKey, replacer, 2));
 			}
 		}
 	}
 }
 
 function VerifySignature() {
-	var json = JSON.parse($("#PublicKeyCredential").text());
+	console.log($("#PublicKeyCredential").val());
+	var json = JSON.parse($("#PublicKeyCredential").val());
 	var publicKeyCredential = {
 		"response":{
 			"clientDataJSON":Uint8Array.from(atobUrlSafe(json.response.clientDataJSON), t => t.charCodeAt(0)),
@@ -61,7 +81,7 @@ function VerifySignature() {
 		},
 	};
 	console.log(JSON.stringify(publicKeyCredential, replacer, 2));
-	var publicKey = JSON.parse($("#credentialPublicKey").text());
+	var publicKey = JSON.parse($("#credentialPublicKey").val());
 	verifyAssertionSignature(publicKeyCredential, publicKey)
 		.catch(e => console.error("verifyAssertionSignature: error "+e))
 		.then(result => console.log("verifyAssertionSignature: returns "+result));

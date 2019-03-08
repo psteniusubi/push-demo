@@ -130,6 +130,10 @@ function sha256(data) {
 }
 
 function convertSignature(publicKey, signature) {
+	if(signature.constructor === Uint8Array) {
+		signature = signature.buffer.slice(signature.byteOffset, signature.byteLength + signature.byteOffset);
+	}
+	if(signature.constructor !== ArrayBuffer) throw "Invalid argument: " + signature.constructor;
 	if(publicKey.kty == "EC") {
 		/*
 			0x30|b1|0x02|b2|r|0x02|b3|s
@@ -138,7 +142,7 @@ function convertSignature(publicKey, signature) {
 			b3 = Length of s 
 		 */
 		var rs = new Uint8Array(64);
-		var view = new DataView(signature.buffer);
+		var view = new DataView(signature);
 		var offset = 0;
 		if(view.getUint8(offset++) != 0x30) throw "Invalid argument";
 		var b1 = view.getUint8(offset++);

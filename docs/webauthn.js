@@ -52,6 +52,9 @@ function replacer(k,v) {
 	return v;
 }
 
+/**
+ * https://w3c.github.io/webauthn/#sec-authenticator-data
+ */
 function decodeAuthenticatorData(data) {
 	if(data.constructor === Uint8Array) {
 		data = data.buffer.slice(data.byteOffset, data.byteLength + data.byteOffset);
@@ -88,6 +91,9 @@ function decodeAuthenticatorData(data) {
 	return authenticatorData;
 }
 
+/**
+ * https://w3c.github.io/webauthn/#sctn-encoded-credPubKey-examples
+ */
 function coseToJwk(data) {
 	var alg, crv;
 	switch(data[1]) {		
@@ -129,6 +135,9 @@ function sha256(data) {
 	return crypto.subtle.digest("SHA-256", data);
 }
 
+/**
+ * https://w3c.github.io/webauthn/#signature-attestation-types
+ */
 function convertSignature(publicKey, signature) {
 	if(signature.constructor === Uint8Array) {
 		signature = signature.buffer.slice(signature.byteOffset, signature.byteLength + signature.byteOffset);
@@ -167,6 +176,10 @@ function convertSignature(publicKey, signature) {
 	}
 }
 
+/**
+ * https://w3c.github.io/webauthn/#assertion-signature
+ * https://w3c.github.io/webauthn/#op-get-assertion
+ */
 function verifyAssertionSignature(publicKeyCredential, publicKey) {	
 	var RS256 = {
 		"name": "RSASSA-PKCS1-v1_5",

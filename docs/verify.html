@@ -33,7 +33,6 @@ function UpdateDisplay() {
 }
 
 function VerifySignature() {
-	//console.log($("#PublicKeyCredential").val());
 	var json = JSON.parse($("#PublicKeyCredential").val());
 	var publicKeyCredential = {
 		"response":{
@@ -42,7 +41,6 @@ function VerifySignature() {
 			"signature":Uint8Array.from(atobUrlSafe(json.response.signature), t => t.charCodeAt(0)),
 		},
 	};
-	console.log(JSON.stringify(publicKeyCredential, replacer, 2));
 	var publicKey = JSON.parse($("#credentialPublicKey").val());
 	verifyAssertionSignature(publicKeyCredential, publicKey)
 		.catch(e => console.error("verifyAssertionSignature: error "+e))

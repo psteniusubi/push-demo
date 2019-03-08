@@ -198,7 +198,7 @@ function verifyAssertionSignature(publicKeyCredential, publicKey) {
 		.then(signed => console.log("signed: return " + signed))
 		.catch(e => console.error("signed:" + e));
 		
-	signature_promise = convertSignature(publicKey, publicKeyCredential.response.signature);
+	var signature_promise = convertSignature(publicKey, publicKeyCredential.response.signature);
 
 	signature_promise
 		.then(signature => console.log("signature: return " + signature))

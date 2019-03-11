@@ -48,21 +48,29 @@ function readSettings() {
 				"id":location.host,
 			};
 		}
+		if(!settings.rp.icon) {
+			settings.rp.icon = location.origin + "/push-demo/rp.png";
+		}
 		if(!settings.user) {
 			settings.user = {
 				"name":"hello@example.com",
 				"displayName":"Hello Example",
 			};
 		}
+		if(!settings.user.icon) {
+			settings.user.icon = location.origin + "/push-demo/user.png";
+		}
 	} else {
 		settings = {
 			"rp": {
 				"name":location.origin,
 				"id":location.host,
+				"icon":location.origin + "/push-demo/rp.png",
 			},
 			"user": {
 				"name":"hello@example.com",
 				"displayName":"Hello Example",
+				"icon":location.origin + "/push-demo/user.png",
 			},
 			"credentials": {},
 		};

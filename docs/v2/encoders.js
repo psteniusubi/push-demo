@@ -8,10 +8,12 @@ function decodeArray(value) {
 
 function replacer(k,v) {
 	if(v && v.constructor === Uint8Array) {
-		return "["+encodeArray(v)+"]";
+		return encodeArray(v);
+		//return "["+encodeArray(v)+"]";
 	}
 	if(v && v.constructor === ArrayBuffer) {
-		return "["+encodeArray(v)+"]";
+		return encodeArray(v);
+		//return "["+encodeArray(v)+"]";
 	}
 	if(v && v.constructor === PublicKeyCredential) {
 		return {

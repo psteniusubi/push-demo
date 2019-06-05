@@ -10,7 +10,7 @@ function new_subscription(login_hint, subscription) {
     var request = {
         subscription: subscription,
         login_hint: login_hint,
-        jwk: { kty: "RSA" }
+        jwk: { kty: "RSA" } // TODO: application public key (webcrypto)
     };
     return fetch(api_host + "/subscription", { method: "POST", body: JSON.stringify(request), headers: { "Content-Type": "application/json" }})
         .then(response => response.ok ? response.json() : http_reject(response));

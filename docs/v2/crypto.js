@@ -1,3 +1,5 @@
+// depends on db.js
+
 const S256 = { name: "SHA-256" };
 const RS256 = {
     name: "RSASSA-PKCS1-v1_5",

@@ -1,3 +1,5 @@
+// depends on base64url.js
+
 function encodeArray(array) {
 	return btoaUrlSafe(Array.from(new Uint8Array(array), t => String.fromCharCode(t)).join(""));
 }

@@ -20,20 +20,24 @@ function as_json(response) {
 		: Promise.resolve(null);
 }
 
-function http_get_json(uri) {
+function http_get_json_request(uri) {
 	const init = {
 		"method":"GET", 
 		"headers": {
 			"Accept": "application/json"
 		},
 	};
-	const request = new Request(uri, init);
+	return new Request(uri, init);
+}
+
+function http_get_json(uri) {
+	const request = http_get_json_request(uri);
 	return fetch(request)
 		.then(response => log_fetch(request, response))
 		.then(response => response.ok ? as_json(response) : http_reject(request, response));
 }
 
-function http_post_json(uri, body) {
+function http_post_json_request(uri, body) {
 	const init = {
 		"method":"POST", 
 		"headers": {
@@ -44,9 +48,21 @@ function http_post_json(uri, body) {
 	if(body) { 
 		init.headers["Content-Type"] = "application/json"; 
 	}
-	const request = new Request(uri, init);
+	return new Request(uri, init);
+}
+
+function http_post_json(uri, body) {
+	const request = http_post_json_request(uri, body);
 	return fetch(request)
 		.then(response => log_fetch(request, response))
 		.then(response => response.ok ? as_json(response) : http_reject(request, response));
 }
 
+function log_error(message, error) {
+    console.error(message + ": " + error);
+    return error;
+}
+
+function log_and_reject(message, error) {
+    return Promise.reject(log_error(message, error));
+}

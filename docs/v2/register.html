@@ -7,99 +7,44 @@
 <script type="text/javascript" src="db.js"></script>
 <script type="text/javascript" src="crypto.js"></script>
 <script type="text/javascript" src="fetch.js"></script>
+<script type="text/javascript" src="oidc.js"></script>
 <script type="text/javascript">
 var DOMContentLoaded = new Promise(resolve => window.addEventListener("DOMContentLoaded", () => resolve()));
 
+// service worker
+
+var serviceWorker_promise = navigator.serviceWorker.register("/push-demo/v2/worker.js", { scope: "/push-demo/v2/" })
+    .then(reg => console.log("register worker.js " + reg) || reg)
+    .catch(error => log_and_reject("navigator.serviceWorker.register(worker.js)", error));
+	
+// application key
+	
+var keyPair_promise = getKey()
+	.catch(() => Promise.resolve(generateKey()))
+
+var jwk_promise = keyPair_promise
+	.then(keyPair => exportKey(keyPair.publicKey))
+
+// openid connect client
+	
 var openid_configuration_uri = "https://sso.example.com/.well-known/openid-configuration";
-var client_configuration_promise = Promise.resolve({
-    "client_id": "register",
-    "client_secret": "register"
-});
 
 function get_client_configuration() {
-    return client_configuration_promise;
+    return Promise.resolve({
+		"client_id": "register",
+		"client_secret": "register"
+	});
 }
-var openid_configuration_promise = null;
+
 function get_openid_configuration() {
-    return openid_configuration_promise = openid_configuration_promise || http_get_json(openid_configuration_uri);
-}
-
-function OpenIDConnectClient(get_provider, get_client) {
-    if(typeof get_provider !== "function") throw "illegal argument";
-    if(typeof get_client !== "function") throw "illegal argument";
-    const self = this;
-    function issue_token_request(code) {
-        console.log("issue_token_request(" + code + ")");    
-        var token_response_promise = Promise.all([get_client(), get_provider()])
-            .then(all => {
-                var client = all[0];
-                var provider = all[1];
-                var headers = { "Content-Type": "application/x-www-form-urlencoded" };
-                var body = "grant_type=authorization_code"
-                    + "&code=" + encodeURIComponent(code)        
-                    + "&client_id=" + encodeURIComponent(client.client_id)
-                    + "&client_secret=" + encodeURIComponent(client.client_secret)
-                    + "&redirect_uri=" + encodeURIComponent(location.origin + location.pathname);
-                var request = new Request(provider.token_endpoint, {"method":"POST", "headers":headers, "body":body});
-                return window.fetch(request)
-                    .then(response => log_fetch(request, response))
-                    .then(response => response.ok ? as_json(response) : http_reject(request, response));
-            });
-        token_response_promise.then(json => console.log(JSON.stringify(json)));
-        return token_response_promise;
-    };
-    this.get_provider = get_provider;
-    this.get_client = get_client;
-    this.fetch = () => Promise.reject("not ready");
-    this.ready = new Promise((resolve, reject) => {
-        window.addEventListener(
-            "authorization_code", 
-            (e) => {
-                console.log("authorization_code e.detail=" + e.detail.code);
-                var token_response_promise = issue_token_request(e.detail.code);
-                self.fetch = (input, init) => {
-                    var request = new Request(input, init);
-                    return token_response_promise
-                        .then(token_response => {
-                            console.log("OpenIDConnectClient.fetch Bearer=" + token_response.access_token);
-                            request.headers.set("Authorization", "Bearer " + token_response.access_token);
-                            return window.fetch(request)
-                                .then(response => log_fetch(request, response));
-                        });
-                };
-                token_response_promise.then(() => resolve(true));
-            }, 
-            {once: true}
-        );
-    });
-}
-
-OpenIDConnectClient.prototype.authorization_code = function(code) {
-    window.dispatchEvent(new CustomEvent("authorization_code", {"detail": {"code": code}}));
-}
-
-OpenIDConnectClient.prototype.authentication_request = function() {
-    Promise.all([this.get_client(), this.get_provider()])
-        .then(all => {
-            var client = all[0];
-            var provider = all[1];
-            var request = "client_id=" + encodeURIComponent(client.client_id)
-                + "&redirect_uri=" + encodeURIComponent(location.origin + location.pathname)
-                + "&response_type=code";
-            location.assign(provider.authorization_endpoint + "?" + request);
-        });
+    return http_get_json(openid_configuration_uri);
 }
 
 var client = new OpenIDConnectClient(get_openid_configuration, get_client_configuration);
 
-if(location.search.startsWith("?")) {
-    location.replace(location.pathname + "#" + location.search.substr(1));
-} else if(/(#|&)code=([^&]*)(&|$)/.test(location.hash)) {
-    var code = RegExp.$2;
-    location.hash = "";
-    // pass authorization_code to client
-    client.authorization_code(code);
-}
+client.process_location();
+
+// user interface
 
 function login_click() {
     console.log("login_click");
@@ -109,34 +54,124 @@ function login_click() {
 
 function registration_request() {
     return client.ready.then(() => {
-        var request = new Request("https://api.example.com/v2/registration", {"method":"POST"});
+        //var request = new Request("https://api.example.com/v2/registration", {"method":"POST"});
+        var request = http_post_json_request("https://api.example.com/v2/registration");
         var promise = client.fetch(request)
             .then(response => response.ok ? as_json(response) : http_reject(request, response));
         promise
-            .then(json => console.log("registration " + JSON.stringify(json)))
+            .then(json => console.log("registration " + encodeJson(json)))
             .catch(e => console.error("registration_click " + e));
         Promise.all([promise,DOMContentLoaded])
             .then(all => $("#username").val(all[0].publicKey.user.name));
         return promise;
-    }
+    });
 }
 
 var registration_request_promise = registration_request();
 
+function request_click() {
+    console.log("request_click");
+	registration_request_promise = registration_request();
+}
+
+function test_request_click() {
+    console.log("test_request_click");
+	client = OpenIDConnectClient.CreateMock();
+	registration_request_promise = registration_request();
+}
+
+function translatePushSubscriptionOptions(json) {
+	var output = {
+		"userVisibleOnly": true,
+		"applicationServerKey": decodeArray(json.applicationServerKey),
+	};
+    console.log("PushSubscriptionOptions " + encodeJson(output));
+	return output;
+}
+
+function translatePublicKeyCredentialCreationOptions(json) {
+	var publicKey = JSON.parse(encodeJson(json.publicKey));
+    publicKey.user.id = decodeArray(publicKey.user.id);
+    publicKey.challenge = decodeArray(publicKey.challenge);
+    var output = { 
+		"publicKey": publicKey 
+	};
+    console.log("PublicKeyCredentialCreationOptions " + encodeJson(output));
+    return output;
+}
+
+function registration_create() {
+    var requestPermission_promise = Notification.requestPermission()
+        .then(permission => console.log("Notification.requestPermission " + permission) || permission)
+        .catch(error => log_and_reject("Notification.requestPermission", error));	
+
+    var pushManager_promise = navigator.serviceWorker.ready
+        .then(serviceWorkerRegistration => serviceWorkerRegistration.pushManager)
+		.catch(error => log_and_reject("navigator.serviceWorker.ready", error));
+		
+	//var registration_request_promise = registration_request();
+
+    var challenge_promise = registration_request_promise
+        .then(t => t.publicKey.challenge);
+
+	var pushManager_subscribe_promise = Promise.all([serviceWorker_promise, requestPermission_promise, registration_request_promise, pushManager_promise])
+		.then(all => {
+			// push subscribe
+			var registration_request = all[2];
+			var pushManager = all[3];
+			return pushManager.subscribe(translatePushSubscriptionOptions(registration_request));
+		})
+        .then(pushSubscription => pushSubscription.toJSON())
+		.then(pushSubscription => console.log("pushManager.subscribe " + encodeJson(pushSubscription)) || pushSubscription)
+		.catch(error => log_and_reject("pushManager.subscribe", error));
+		
+	var credentials_create_promise = Promise.all([requestPermission_promise, registration_request_promise, challenge_promise])
+		.then(all => {
+			// create credentials
+			var registration_request = all[1];
+			return navigator.credentials.create(translatePublicKeyCredentialCreationOptions(registration_request));
+		})
+		.then(credentials => console.log("navigator.credentials.create " + encodeJson(credentials)) || credentials)
+		.catch(error => log_error("navigator.credentials.create", error) && Promise.resolve(null));
+
+	return Promise.all([pushManager_subscribe_promise, credentials_create_promise, jwk_promise, challenge_promise])
+		.then(all => {
+			var credentialsCreateRequest = {
+				"clientPublicKey": all[2],
+				"subscription": all[0],
+				"publicKeyCredential": all[1],
+			};            
+            var challenge = all[3];
+			console.log("credentialsCreateRequest " + encodeJson(credentialsCreateRequest));
+            var request = http_post_json_request("https://api.example.com/v2/registration/" + encodeURIComponent(challenge), encodeJson(credentialsCreateRequest));
+			return client.fetch(request)
+				.then(response => response.ok ? as_json(response) : http_reject(request, response));
+		})
+        .then(json => console.log("createCredential " + encodeJson(json)) || json)
+		.catch(error => log_and_reject("createCredential", error));		
+}
+
 function register_click() {
-    console.log("register_click");
+	var registration_promise = registration_create();
+	registration_promise
+		.then(json => $("#client_id").val(json.client_id));
+	registration_promise
+		.then(json => localStorage.setItem("client_id", json.client_id));
 }
 
 DOMContentLoaded.then(() => $("#login").click(login_click));
 DOMContentLoaded.then(() => $("#username").val("Wait.."));
+DOMContentLoaded.then(() => $("#request").click(request_click));
+DOMContentLoaded.then(() => $("#test_request").click(test_request_click));
 DOMContentLoaded.then(() => $("#register").click(register_click));
 </script>
 </head>
 <body>
 <p><a href="https://psteniusubi.example.com/push-demo/v2/register.html">psteniusubi.example.com</a></p>
-<p><a href="https://psteniusubi.example.com/push-demo/v2/register.html#code=123">psteniusubi.example.com#code=123</a></p>
 <p><input type="button" id="login" value="Login" /></p>
 <p><input type="text" id="username" /></p>
+<p><input type="button" id="request" value="Request" /> <input type="button" id="test_request" value="Test request" /></p>
 <p><input type="button" id="register" value="Register" /></p>
+<p><input type="text" id="client_id" /></p>
 </body>
 </html>

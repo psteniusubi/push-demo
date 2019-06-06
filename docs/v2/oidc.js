@@ -76,7 +76,7 @@ OpenIDConnectClient.prototype.authorization_code = function(code) {
     window.dispatchEvent(new CustomEvent("authorization_code", {"detail": {"code": code}}));
 }
 
-OpenIDConnectClient.prototype.authentication_request = function() {
+OpenIDConnectClient.prototype.send_authentication_request = function() {
     Promise.all([this.get_client(), this.get_provider()])
         .then(all => {
             var client = all[0];
@@ -89,13 +89,17 @@ OpenIDConnectClient.prototype.authentication_request = function() {
         });
 }
 
-OpenIDConnectClient.prototype.process_location = function() {
+OpenIDConnectClient.prototype.process_authentication_response = function() {
 	if(location.search.startsWith("?")) {
+		window.stop();
 		location.replace(location.pathname + "#" + location.search.substr(1));
+		return new Promise(() => {});
 	} else if(/(#|&)code=([^&]*)(&|$)/.test(location.hash)) {
 		var code = RegExp.$2;
 		location.hash = "";
 		// pass authorization_code to client
 		this.authorization_code(code);
+		return Promise.resolve(true);
 	}
+	return Promise.resolve(false);
 }

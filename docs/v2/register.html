@@ -25,9 +25,7 @@ var keyPair_promise = getKey()
 var jwk_promise = keyPair_promise
 	.then(keyPair => exportKey(keyPair.publicKey))
 
-// openid connect client
-	
-var openid_configuration_uri = "https://sso.example.com/.well-known/openid-configuration";
+// openid connect client configuration
 
 function get_client_configuration() {
     return Promise.resolve({
@@ -37,48 +35,50 @@ function get_client_configuration() {
 }
 
 function get_openid_configuration() {
+	var openid_configuration_uri = "https://sso.example.com/.well-known/openid-configuration";
     return http_get_json(openid_configuration_uri);
 }
-
-var client = new OpenIDConnectClient(get_openid_configuration, get_client_configuration);
-
-client.process_location();
 
 // user interface
 
 function login_click() {
     console.log("login_click");
     // send oidc authentication request
-    client.authentication_request();
+    client.send_authentication_request();
 }
 
-function registration_request() {
+// POST /v2/registration/challenge
+
+function registration_challenge() {
     return client.ready.then(() => {
-        //var request = new Request("https://api.example.com/v2/registration", {"method":"POST"});
-        var request = http_post_json_request("https://api.example.com/v2/registration");
+        var request = http_post_json_request("https://api.example.com/v2/registration/challenge");
         var promise = client.fetch(request)
             .then(response => response.ok ? as_json(response) : http_reject(request, response));
         promise
-            .then(json => console.log("registration " + encodeJson(json)))
-            .catch(e => console.error("registration_click " + e));
+            .then(json => console.log("RegistrationChallenge " + encodeJson(json)))
+            .catch(e => console.error("registration_challenge " + e));
         Promise.all([promise,DOMContentLoaded])
             .then(all => $("#username").val(all[0].publicKey.user.name));
         return promise;
     });
 }
 
-var registration_request_promise = registration_request();
+// test
 
 function request_click() {
     console.log("request_click");
-	registration_request_promise = registration_request();
+	registration_challenge_promise = registration_challenge();
 }
+
+// test with mock access token
 
 function test_request_click() {
     console.log("test_request_click");
 	client = OpenIDConnectClient.CreateMock();
-	registration_request_promise = registration_request();
+	registration_challenge_promise = registration_challenge();
 }
+
+// webpush PushSubscriptionOptions
 
 function translatePushSubscriptionOptions(json) {
 	var output = {
@@ -89,7 +89,10 @@ function translatePushSubscriptionOptions(json) {
 	return output;
 }
 
+// webauthn PublicKeyCredentialCreationOptions
+
 function translatePublicKeyCredentialCreationOptions(json) {
+	// use json to deep clone publicKey
 	var publicKey = JSON.parse(encodeJson(json.publicKey));
     publicKey.user.id = decodeArray(publicKey.user.id);
     publicKey.challenge = decodeArray(publicKey.challenge);
@@ -100,77 +103,114 @@ function translatePublicKeyCredentialCreationOptions(json) {
     return output;
 }
 
-function registration_create() {
+// POST /v2/registration/confirm/a2fb7d0831c0
+
+function registration_confirm() {
+
+	// Notification.requestPermission
+
     var requestPermission_promise = Notification.requestPermission()
         .then(permission => console.log("Notification.requestPermission " + permission) || permission)
         .catch(error => log_and_reject("Notification.requestPermission", error));	
+		
+	// serviceWorkerRegistration.pushManager
 
     var pushManager_promise = navigator.serviceWorker.ready
         .then(serviceWorkerRegistration => serviceWorkerRegistration.pushManager)
 		.catch(error => log_and_reject("navigator.serviceWorker.ready", error));
 		
-	//var registration_request_promise = registration_request();
-
-    var challenge_promise = registration_request_promise
-        .then(t => t.publicKey.challenge);
-
-	var pushManager_subscribe_promise = Promise.all([serviceWorker_promise, requestPermission_promise, registration_request_promise, pushManager_promise])
+	// pushManager.subscribe
+		
+	var pushManager_subscribe_promise = Promise.all([serviceWorker_promise, requestPermission_promise, registration_challenge_promise, pushManager_promise])
 		.then(all => {
 			// push subscribe
-			var registration_request = all[2];
+			var registration_challenge = all[2];
 			var pushManager = all[3];
-			return pushManager.subscribe(translatePushSubscriptionOptions(registration_request));
+			return pushManager.subscribe(translatePushSubscriptionOptions(registration_challenge));
 		})
         .then(pushSubscription => pushSubscription.toJSON())
 		.then(pushSubscription => console.log("pushManager.subscribe " + encodeJson(pushSubscription)) || pushSubscription)
 		.catch(error => log_and_reject("pushManager.subscribe", error));
 		
-	var credentials_create_promise = Promise.all([requestPermission_promise, registration_request_promise, challenge_promise])
+	// navigator.credentials.create
+		
+	var credentials_create_promise = Promise.all([requestPermission_promise, registration_challenge_promise])
 		.then(all => {
 			// create credentials
-			var registration_request = all[1];
-			return navigator.credentials.create(translatePublicKeyCredentialCreationOptions(registration_request));
+			var registration_challenge = all[1];
+			return navigator.credentials.create(translatePublicKeyCredentialCreationOptions(registration_challenge));
 		})
 		.then(credentials => console.log("navigator.credentials.create " + encodeJson(credentials)) || credentials)
 		.catch(error => log_error("navigator.credentials.create", error) && Promise.resolve(null));
+		
+	// POST /v2/registration/confirm/a2fb7d0831c0
 
-	return Promise.all([pushManager_subscribe_promise, credentials_create_promise, jwk_promise, challenge_promise])
+	return Promise.all([pushManager_subscribe_promise, credentials_create_promise, jwk_promise, registration_challenge_promise])
 		.then(all => {
 			var credentialsCreateRequest = {
 				"clientPublicKey": all[2],
 				"subscription": all[0],
 				"publicKeyCredential": all[1],
 			};            
-            var challenge = all[3];
-			console.log("credentialsCreateRequest " + encodeJson(credentialsCreateRequest));
-            var request = http_post_json_request("https://api.example.com/v2/registration/" + encodeURIComponent(challenge), encodeJson(credentialsCreateRequest));
+            var challenge = all[3].publicKey.challenge;
+			console.log("RegistrationConfirmRequest " + encodeJson(credentialsCreateRequest));
+            var request = http_post_json_request("https://api.example.com/v2/registration/confirm/" + encodeURIComponent(challenge), encodeJson(credentialsCreateRequest));
 			return client.fetch(request)
 				.then(response => response.ok ? as_json(response) : http_reject(request, response));
 		})
-        .then(json => console.log("createCredential " + encodeJson(json)) || json)
-		.catch(error => log_and_reject("createCredential", error));		
+        .then(json => console.log("RegistrationConfirmResponse " + encodeJson(json)) || json)
+		.catch(error => log_and_reject("registration_confirm", error));		
 }
 
-function register_click() {
-	var registration_promise = registration_create();
-	registration_promise
+function confirm_click() {
+	var registration_confirm_promise = registration_confirm();
+	registration_confirm_promise
 		.then(json => $("#client_id").val(json.client_id));
-	registration_promise
-		.then(json => localStorage.setItem("client_id", json.client_id));
+	registration_confirm_promise
+		.then(json => {
+			localStorage.setItem("client_id", json.client_id);
+			location.assign("transaction.html");
+		});
 }
 
-DOMContentLoaded.then(() => $("#login").click(login_click));
-DOMContentLoaded.then(() => $("#username").val("Wait.."));
-DOMContentLoaded.then(() => $("#request").click(request_click));
-DOMContentLoaded.then(() => $("#test_request").click(test_request_click));
-DOMContentLoaded.then(() => $("#register").click(register_click));
+function page_initialize(code_hint) {
+	console.log("page_initialize(" + code_hint + ")");
+	if(code_hint) {
+		registration_challenge_promise = registration_challenge();
+	} else {
+		var client_id = localStorage.getItem("client_id");
+		if(client_id) {
+			http_get_json("https://api.example.com/v2/transaction/client/" + encodeURIComponent(client_id))
+				.then(list => console.log(encodeJson(list)) || list)
+				.then(list => list.length > 0 ? location.assign("transaction.html#" + list[0]) : location.assign("transaction.html"));
+		}
+	}
+	DOMContentLoaded.then(dom_loaded);
+}
+
+function dom_loaded() {
+	$("#login").click(login_click);
+	$("#username").val("Wait..");
+	$("#request").click(request_click);
+	$("#test_request").click(test_request_click);
+	$("#confirm").click(confirm_click);
+}
+
+// runs on page load
+
+var client = new OpenIDConnectClient(get_openid_configuration, get_client_configuration);
+var registration_challenge_promise = null;
+
+client.process_authentication_response()
+	.then(page_initialize);
+	
 </script>
 </head>
 <body>
 <p><input type="button" id="login" value="Login" /></p>
 <p><input type="text" id="username" /></p>
 <p><input type="button" id="request" value="Request" /> <input type="button" id="test_request" value="Test request" /></p>
-<p><input type="button" id="register" value="Register" /></p>
+<p><input type="button" id="confirm" value="Confirm" /></p>
 <p><input type="text" id="client_id" /></p>
 </body>
 </html>

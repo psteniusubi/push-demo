@@ -12,6 +12,7 @@
 <script type="text/javascript">
 var DOMContentLoaded = new Promise(resolve => window.addEventListener("DOMContentLoaded", () => resolve()));
 
+/*
 // service worker
 
 var serviceWorker_promise = navigator.serviceWorker.register("/push-demo/v2/worker.js", { scope: "/push-demo/v2/" })
@@ -25,6 +26,7 @@ var keyPair_promise = getKey()
 
 var jwk_promise = keyPair_promise
 	.then(keyPair => exportKey(keyPair.publicKey))
+*/    
 
 // openid connect client configuration
 
@@ -55,19 +57,6 @@ function registration_challenge() {
 	Promise.all([promise,DOMContentLoaded])
 		.then(all => $("#username").val(all[0].publicKey.user.name));
 	return promise;
-/*
-    return client.ready.then(() => {
-        var request = http_post_json_request("https://api.example.com/v2/registration/challenge");
-        var promise = client.fetch(request)
-            .then(response => response.ok ? as_json(response) : http_reject(request, response));
-        promise
-            .then(json => console.log("RegistrationChallenge " + encodeJson(json)))
-            .catch(e => console.error("registration_challenge " + e));
-        Promise.all([promise,DOMContentLoaded])
-            .then(all => $("#username").val(all[0].publicKey.user.name));
-        return promise;
-    });
-*/	
 }
 
 // test
@@ -86,88 +75,11 @@ function test_request_click() {
 	registration_challenge_promise = registration_challenge();
 }
 
-// webpush PushSubscriptionOptions
-
-function translatePushSubscriptionOptions(json) {
-	var output = {
-		"userVisibleOnly": true,
-		"applicationServerKey": decodeArray(json.applicationServerKey),
-	};
-    console.log("PushSubscriptionOptions " + encodeJson(output));
-	return output;
-}
-
-// webauthn PublicKeyCredentialCreationOptions
-
-function translatePublicKeyCredentialCreationOptions(json) {
-	// use json to deep clone publicKey
-	var publicKey = JSON.parse(encodeJson(json.publicKey));
-    publicKey.user.id = decodeArray(publicKey.user.id);
-    publicKey.challenge = decodeArray(publicKey.challenge);
-    var output = { 
-		"publicKey": publicKey 
-	};
-    console.log("PublicKeyCredentialCreationOptions " + encodeJson(output));
-    return output;
-}
-
-// POST /v2/registration/confirm/a2fb7d0831c0
+// POST /v2/registration/confirm/{challenge}
 
 function registration_confirm() {
-
-	// Notification.requestPermission
-
-    var requestPermission_promise = Notification.requestPermission()
-        .then(permission => console.log("Notification.requestPermission " + permission) || permission)
-        .catch(error => log_and_reject("Notification.requestPermission", error));	
-		
-	// serviceWorkerRegistration.pushManager
-
-    var pushManager_promise = navigator.serviceWorker.ready
-        .then(serviceWorkerRegistration => serviceWorkerRegistration.pushManager)
-		.catch(error => log_and_reject("navigator.serviceWorker.ready", error));
-		
-	// pushManager.subscribe
-		
-	var pushManager_subscribe_promise = Promise.all([serviceWorker_promise, requestPermission_promise, registration_challenge_promise, pushManager_promise])
-		.then(all => {
-			// push subscribe
-			var registration_challenge = all[2];
-			var pushManager = all[3];
-			return pushManager.subscribe(translatePushSubscriptionOptions(registration_challenge));
-		})
-        .then(pushSubscription => pushSubscription.toJSON())
-		.then(pushSubscription => console.log("pushManager.subscribe " + encodeJson(pushSubscription)) || pushSubscription)
-		.catch(error => log_and_reject("pushManager.subscribe", error));
-		
-	// navigator.credentials.create
-		
-	var credentials_create_promise = Promise.all([requestPermission_promise, registration_challenge_promise])
-		.then(all => {
-			// create credentials
-			var registration_challenge = all[1];
-			return navigator.credentials.create(translatePublicKeyCredentialCreationOptions(registration_challenge));
-		})
-		.then(credentials => console.log("navigator.credentials.create " + encodeJson(credentials)) || credentials)
-		.catch(error => log_error("navigator.credentials.create", error) && Promise.resolve(null));
-		
-	// POST /v2/registration/confirm/{challenge}
-
-	return Promise.all([pushManager_subscribe_promise, credentials_create_promise, jwk_promise, registration_challenge_promise])
-		.then(all => {
-			var credentialsCreateRequest = {
-				"clientPublicKey": all[2],
-				"subscription": all[0],
-				"publicKeyCredential": all[1],
-			};            
-            var challenge = all[3].publicKey.challenge;
-			console.log("RegistrationConfirmRequest " + encodeJson(credentialsCreateRequest));
-            var request = http_post_json_request("https://api.example.com/v2/registration/confirm/" + encodeURIComponent(challenge), encodeJson(credentialsCreateRequest));
-			return client.fetch(request)
-				.then(response => response.ok ? as_json(response) : http_reject(request, response));
-		})
-        .then(json => console.log("RegistrationConfirmResponse " + encodeJson(json)) || json)
-		.catch(error => log_and_reject("registration_confirm", error));		
+    return registration_challenge_promise
+        .then(registration_challenge => api.confirmChallenge(registration_challenge));     
 }
 
 function confirm_click() {
@@ -177,8 +89,17 @@ function confirm_click() {
 	registration_confirm_promise
 		.then(json => {
 			localStorage.setItem("client_id", json.client_id);
-			location.assign("transaction.html");
+			transaction();
 		});
+}
+
+function transaction() {
+    var client_id = localStorage.getItem("client_id");
+    if(client_id) {
+        http_get_json(api.uri + "/v2/transaction/client/" + encodeURIComponent(client_id))
+            .then(list => console.log(encodeJson(list)) || list)
+            .then(list => list.length > 0 ? location.assign("transaction.html#" + encodeURIComponent(list[0])) : location.assign("transaction.html"));
+    }
 }
 
 function page_initialize(code_hint) {
@@ -186,17 +107,13 @@ function page_initialize(code_hint) {
 	if(code_hint) {
 		registration_challenge_promise = registration_challenge();
 	} else {
-		var client_id = localStorage.getItem("client_id");
-		if(client_id) {
-			http_get_json("https://api.example.com/v2/transaction/client/" + encodeURIComponent(client_id))
-				.then(list => console.log(encodeJson(list)) || list)
-				.then(list => list.length > 0 ? location.assign("transaction.html#" + list[0]) : location.assign("transaction.html"));
-		}
+        transaction();
 	}
 	DOMContentLoaded.then(dom_loaded);
 }
 
 function dom_loaded() {
+	console.log("dom_loaded()");
 	$("#login").click(login_click);
 	$("#username").val("Wait..");
 	$("#request").click(request_click);

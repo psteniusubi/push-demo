@@ -14,7 +14,7 @@ function log_fetch(request, response) {
 
 function as_json(response) {
 	const contentType = response.headers.get("Content-Type");
-	const isJson = contentType.match(/^application\/json(;|$)/);
+	const isJson = contentType && contentType.match(/^application\/json(;|$)/);
 	return isJson
 		? response.json()
 		: Promise.resolve(null);

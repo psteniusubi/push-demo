@@ -18,21 +18,9 @@ body.confirm .confirm {
 <script type="text/javascript" src="db.js"></script>
 <script type="text/javascript" src="crypto.js"></script>
 <script type="text/javascript" src="fetch.js"></script>
+<script type="text/javascript" src="transaction-api.js"></script>
 <script type="text/javascript">
 var DOMContentLoaded = new Promise(resolve => window.addEventListener("DOMContentLoaded", () => resolve()));
-
-// service worker
-
-var serviceWorker_promise = navigator.serviceWorker.register("/push-demo/v2/worker.js", { scope: "/push-demo/v2/" })
-    .then(reg => console.log("register worker.js " + reg) || reg)
-    .catch(error => log_and_reject("navigator.serviceWorker.register(worker.js)", error));
-	
-// application key
-	
-var keyPair_promise = getKey()
-	.catch(e => registration() || e);
-
-//
 
 function registration() {
 	location.assign("register.html");
@@ -43,89 +31,65 @@ function registration() {
 var poll_timeout_id = 0;
 
 function poll_transaction() {
-	//console.log("poll_transaction()");
 	window.clearTimeout(poll_timeout_id);
-	var client_id = localStorage.getItem("client_id");
+	const client_id = api.getClientId();
 	if(!client_id) {
 		registration();
 		return;
 	}
 	$(document.body).toggleClass("confirm", location.hash !== "");
-	http_get_json("https://api.example.com/v2/transaction/client/" + encodeURIComponent(client_id))
-		//.then(list => console.log(encodeJson(list)) || list)
+    api.getList()
 		.then(list => {
 			if(location.hash) {
-				if(!list.includes(location.hash.substr(1))) {
+                const push_id = location.hash.substr(1);
+				if(!list.includes(push_id)) {
 					location.hash = "";
-				} else {
-				}
+				} 
 			} else if(list.length > 0) {
 				location.hash = list[0];
 			} else {
 			}
 			poll_timeout_id = window.setTimeout(poll_transaction, 1000);
 		})
-		.catch(e => registration() || e);
-}
-
-// 
-
-// webauthn PublicKeyCredentialRequestOptions
-
-function translatePublicKeyCredentialRequestOptions(json) {
-	// use json to deep clone publicKey
-	var publicKey = JSON.parse(encodeJson(json.publicKey));
-    publicKey.challenge = decodeArray(publicKey.challenge);
-	if(publicKey.allowCredentials) {
-		for(var i in publicKey.allowCredentials) {
-			var allow = publicKey.allowCredentials[i];
-			allow.id = decodeArray(allow.id);
-		}
-	}
-    var output = { 
-		"publicKey": publicKey 
-	};
-    console.log("PublicKeyCredentialRequestOptions " + encodeJson(output));
-    return output;
-}
-
-function confirm_transaction_challenge(transaction_challenge) {
-	console.log("confirm_transaction_challenge()");
-	return navigator.credentials.get(translatePublicKeyCredentialRequestOptions(transaction_challenge))
-		.then(credentials => console.log(encodeJson(credentials)) || credentials)
-		.then(credentials => {
-			var transactionConfirmRequest = {
-				publicKeyCredential: credentials
-			};
-			return http_post_json("https://api.example.com/v2/transaction/id/" + encodeURIComponent(location.hash.substr(1)), encodeJson(transactionConfirmRequest));
-		})
-		.then(() => location.hash = "");
+		.catch(() => registration());
 }
 
 function confirm_click() {
 	console.log("confirm_click()");
 	if(!location.hash) return;
-	http_get_json("https://api.example.com/v2/transaction/id/" + encodeURIComponent(location.hash.substr(1)))
-		.then(json => console.log(encodeJson(json)) || json)
-		.then(confirm_transaction_challenge);
+    const push_id = location.hash.substr(1);
+    api.createChallenge(push_id)
+        .then(transaction_challenge => api.confirmChallenge(push_id, transaction_challenge))
+        .then(() => location.hash = "");
 }
 
 function reject_click() {
 	console.log("reject_click()");
 	if(!location.hash) return;
-	var request = new Request("https://api.example.com/v2/transaction/id/" + encodeURIComponent(location.hash.substr(1)), {method:"DELETE"});
-	fetch(request)
-		.then(response => log_fetch(request, response))
-		.then(() => location.hash = "");
+    const push_id = location.hash.substr(1);
+    api.rejectChallenge(push_id)
+        .then(() => location.hash = "");
 }
 
-window.addEventListener("hashchange", poll_transaction);
-	
-poll_transaction();
+function page_initialize(ready) {
+    if(!ready) {
+        registration();
+        return;
+    }
+    window.addEventListener("hashchange", poll_transaction);
+    poll_transaction();
+    DOMContentLoaded.then(dom_loaded);
+}
 
-DOMContentLoaded.then(() => $("#confirm").on("click", confirm_click));
-DOMContentLoaded.then(() => $("#reject").on("click", reject_click));
-DOMContentLoaded.then(() => $("#close").on("click", () => window.close()));
+function dom_loaded() {
+	console.log("dom_loaded()");
+    $("#confirm").on("click", confirm_click);
+    $("#reject").on("click", reject_click);
+    $("#close").on("click", () => window.close());
+}
+
+var api = new TransactionAPI("https://api.example.com");
+api.ready.then(page_initialize);
 </script>
 </head>
 <body>

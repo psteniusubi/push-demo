@@ -22,6 +22,10 @@ body.confirm .confirm {
 <script type="text/javascript">
 var DOMContentLoaded = new Promise(resolve => window.addEventListener("DOMContentLoaded", () => resolve()));
 
+var api_uri = (location.hostname === "psteniusubi.example.com") 
+    ? "https://api.example.com" 
+    : "https://ubi-push-demo.azurewebsites.net";
+
 function registration() {
 	location.assign("register.html");
 }
@@ -88,9 +92,7 @@ function dom_loaded() {
     $("#close").on("click", () => window.close());
 }
 
-var api = new TransactionAPI(
-    (location.hostname === "psteniusubi.example.com") ? "https://api.example.com" : "https://ubi-push-demo.azurewebsites.net"
-);
+var api = new TransactionAPI(api_uri);
 api.ready.then(page_initialize);
 </script>
 </head>

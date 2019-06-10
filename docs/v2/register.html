@@ -12,35 +12,24 @@
 <script type="text/javascript">
 var DOMContentLoaded = new Promise(resolve => window.addEventListener("DOMContentLoaded", () => resolve()));
 
-/*
-// service worker
-
-var serviceWorker_promise = navigator.serviceWorker.register("/push-demo/v2/worker.js", { scope: "/push-demo/v2/" })
-    .then(reg => console.log("register worker.js " + reg) || reg)
-    .catch(error => log_and_reject("navigator.serviceWorker.register(worker.js)", error));
-	
-// application key
-	
-var keyPair_promise = getKey()
-	.catch(() => Promise.resolve(generateKey()))
-
-var jwk_promise = keyPair_promise
-	.then(keyPair => exportKey(keyPair.publicKey))
-*/    
+var api_uri = (location.hostname === "psteniusubi.example.com") 
+    ? "https://api.example.com" 
+    : "https://ubi-push-demo.azurewebsites.net";
+    
+var openid_configuration_uri = (location.hostname === "psteniusubi.example.com") 
+    ? "https://sso.example.com/.well-known/openid-configuration" 
+    : "https://login.example.ubidemo.com/uas/.well-known/openid-configuration";
 
 // openid connect client configuration
 
 function get_client_configuration() {
     return Promise.resolve({
-		"client_id": "register",
-		"client_secret": "register"
+		"client_id": "registration",
+		"client_secret": "public"
 	});
 }
 
 function get_openid_configuration() {
-	var openid_configuration_uri = (location.hostname === "psteniusubi.example.com") 
-        ? "https://sso.example.com/.well-known/openid-configuration" 
-        : "https://login.example.ubidemo.com/uas/.well-known/openid-configuration";
     return http_get_json(openid_configuration_uri);
 }
 
@@ -73,7 +62,7 @@ function request_click() {
 function test_request_click() {
     console.log("test_request_click");
 	client = OpenIDConnectClient.CreateMock();
-	api = new RegistrationAPI("https://api.example.com", client);
+	api = new RegistrationAPI(api_uri, client);
 	registration_challenge_promise = registration_challenge();
 }
 
@@ -128,9 +117,7 @@ function dom_loaded() {
 var registration_challenge_promise = null;
 
 var client = new OpenIDConnectClient(get_openid_configuration, get_client_configuration);
-var api = new RegistrationAPI(
-    (location.hostname === "psteniusubi.example.com") ? "https://api.example.com" : "https://ubi-push-demo.azurewebsites.net", 
-    client);
+var api = new RegistrationAPI(api_uri, client);
 
 client.process_authentication_response()
 	.then(page_initialize);

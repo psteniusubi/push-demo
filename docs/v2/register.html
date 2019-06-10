@@ -38,7 +38,9 @@ function get_client_configuration() {
 }
 
 function get_openid_configuration() {
-	var openid_configuration_uri = "https://sso.example.com/.well-known/openid-configuration";
+	var openid_configuration_uri = (location.hostname === "psteniusubi.example.com") 
+        ? "https://sso.example.com/.well-known/openid-configuration" 
+        : "https://login.example.ubidemo.com/uas/.well-known/openid-configuration";
     return http_get_json(openid_configuration_uri);
 }
 
@@ -126,7 +128,9 @@ function dom_loaded() {
 var registration_challenge_promise = null;
 
 var client = new OpenIDConnectClient(get_openid_configuration, get_client_configuration);
-var api = new RegistrationAPI("https://api.example.com", client);
+var api = new RegistrationAPI(
+    (location.hostname === "psteniusubi.example.com") ? "https://api.example.com" : "https://ubi-push-demo.azurewebsites.net", 
+    client);
 
 client.process_authentication_response()
 	.then(page_initialize);

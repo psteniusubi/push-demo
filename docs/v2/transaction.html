@@ -88,7 +88,9 @@ function dom_loaded() {
     $("#close").on("click", () => window.close());
 }
 
-var api = new TransactionAPI("https://api.example.com");
+var api = new TransactionAPI(
+    (location.hostname === "psteniusubi.example.com") ? "https://api.example.com" : "https://ubi-push-demo.azurewebsites.net"
+);
 api.ready.then(page_initialize);
 </script>
 </head>

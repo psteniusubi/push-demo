@@ -32,9 +32,6 @@ var serviceWorker_promise = navigator.serviceWorker.register("/push-demo/v2/work
 var keyPair_promise = getKey()
 	.catch(e => registration() || e);
 
-var jwk_promise = keyPair_promise
-	.then(keyPair => exportKey(keyPair.publicKey))
-	
 //
 
 function registration() {

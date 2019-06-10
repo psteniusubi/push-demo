@@ -8,6 +8,7 @@
 <script type="text/javascript" src="crypto.js"></script>
 <script type="text/javascript" src="fetch.js"></script>
 <script type="text/javascript" src="oidc.js"></script>
+<script type="text/javascript" src="registration-api.js"></script>
 <script type="text/javascript">
 var DOMContentLoaded = new Promise(resolve => window.addEventListener("DOMContentLoaded", () => resolve()));
 
@@ -50,6 +51,11 @@ function login_click() {
 // POST /v2/registration/challenge
 
 function registration_challenge() {
+	var promise = api.createChallenge();
+	Promise.all([promise,DOMContentLoaded])
+		.then(all => $("#username").val(all[0].publicKey.user.name));
+	return promise;
+/*
     return client.ready.then(() => {
         var request = http_post_json_request("https://api.example.com/v2/registration/challenge");
         var promise = client.fetch(request)
@@ -61,6 +67,7 @@ function registration_challenge() {
             .then(all => $("#username").val(all[0].publicKey.user.name));
         return promise;
     });
+*/	
 }
 
 // test
@@ -75,6 +82,7 @@ function request_click() {
 function test_request_click() {
     console.log("test_request_click");
 	client = OpenIDConnectClient.CreateMock();
+	api = new RegistrationAPI("https://api.example.com", client);
 	registration_challenge_promise = registration_challenge();
 }
 
@@ -143,7 +151,7 @@ function registration_confirm() {
 		.then(credentials => console.log("navigator.credentials.create " + encodeJson(credentials)) || credentials)
 		.catch(error => log_error("navigator.credentials.create", error) && Promise.resolve(null));
 		
-	// POST /v2/registration/confirm/a2fb7d0831c0
+	// POST /v2/registration/confirm/{challenge}
 
 	return Promise.all([pushManager_subscribe_promise, credentials_create_promise, jwk_promise, registration_challenge_promise])
 		.then(all => {
@@ -198,8 +206,10 @@ function dom_loaded() {
 
 // runs on page load
 
-var client = new OpenIDConnectClient(get_openid_configuration, get_client_configuration);
 var registration_challenge_promise = null;
+
+var client = new OpenIDConnectClient(get_openid_configuration, get_client_configuration);
+var api = new RegistrationAPI("https://api.example.com", client);
 
 client.process_authentication_response()
 	.then(page_initialize);

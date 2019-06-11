@@ -84,6 +84,7 @@ OpenIDConnectClient.prototype.send_authentication_request = function() {
             var request = "client_id=" + encodeURIComponent(client.client_id)
                 + "&redirect_uri=" + encodeURIComponent(location.origin + location.pathname)
                 + "&response_type=code"
+                + "&scope=" + encodeURIComponent(client.scope || "openid")
                 + "&login_hint=" + encodeURIComponent("hello@example.com");
             location.assign(provider.authorization_endpoint + "?" + request);
         });

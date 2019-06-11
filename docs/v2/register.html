@@ -15,22 +15,24 @@ var DOMContentLoaded = new Promise(resolve => window.addEventListener("DOMConten
 var api_uri = (location.hostname === "psteniusubi.example.com") 
     ? "https://api.example.com" 
     : "https://ubi-push-demo.azurewebsites.net";
-    
+
+/*    
 var openid_configuration_uri = (location.hostname === "psteniusubi.example.com") 
     ? "https://sso.example.com/.well-known/openid-configuration" 
     : "https://login.example.ubidemo.com/uas/.well-known/openid-configuration";
+*/    
 
 // openid connect client configuration
 
+var client_configuration_promise = null;
+
 function get_client_configuration() {
-    return Promise.resolve({
-		"client_id": "registration",
-		"client_secret": "public"
-	});
+    return client_configuration_promise = client_configuration_promise || http_get_json(api_uri + "/v2/registration/configuration");
 }
 
 function get_openid_configuration() {
-    return http_get_json(openid_configuration_uri);
+    return get_client_configuration()
+        .then(config => http_get_json(config.issuer + "/.well-known/openid-configuration"));
 }
 
 // user interface

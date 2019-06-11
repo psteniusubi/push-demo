@@ -66,6 +66,16 @@ function test_request_click() {
 	registration_challenge_promise = registration_challenge();
 }
 
+function unsubscribe_click() {
+	navigator.serviceWorker.ready
+		.then(serviceWorkerRegistration => serviceWorkerRegistration.pushManager)
+		.then(pushManager => pushManager.getSubscription())
+		.then(subscription => console.log("subscription " + subscription) || subscription)
+		.then(subscription => subscription && subscription.unsubscribe())
+		.then(status => console.log("unsubscribe " + status))
+		.catch(e => console.error("getSubscription " + e));
+}
+
 // POST /v2/registration/confirm/{challenge}
 
 function registration_confirm() {
@@ -109,6 +119,7 @@ function dom_loaded() {
 	$("#username").val("Wait..");
 	$("#request").click(request_click);
 	$("#test_request").click(test_request_click);
+	$("#unsubscribe").click(unsubscribe_click);
 	$("#confirm").click(confirm_click);
 }
 
@@ -128,6 +139,7 @@ client.process_authentication_response()
 <p><input type="button" id="login" value="Login" /></p>
 <p><input type="text" id="username" /></p>
 <p><input type="button" id="request" value="Request" /> <input type="button" id="test_request" value="Test request" /></p>
+<p><input type="button" id="unsubscribe" value="Unsubscribe" /></p>
 <p><input type="button" id="confirm" value="Confirm" /></p>
 <p><input type="text" id="client_id" /></p>
 </body>

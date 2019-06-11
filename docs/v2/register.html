@@ -8,6 +8,11 @@
 body {
 	font-family: sans-serif;
 }
+.error {
+    color:red;
+}
+p#status {
+}
 </style>
 <script type="text/javascript" src="https://code.jquery.com/jquery-3.3.1.js"></script>
 <script type="text/javascript" src="../base64url.js"></script>
@@ -23,12 +28,6 @@ var DOMContentLoaded = new Promise(resolve => window.addEventListener("DOMConten
 var api_uri = (location.hostname === "psteniusubi.example.com") 
     ? "https://api.example.com" 
     : "https://ubi-push-demo.azurewebsites.net";
-
-/*    
-var openid_configuration_uri = (location.hostname === "psteniusubi.example.com") 
-    ? "https://sso.example.com/.well-known/openid-configuration" 
-    : "https://login.example.ubidemo.com/uas/.well-known/openid-configuration";
-*/    
 
 // openid connect client configuration
 
@@ -77,13 +76,17 @@ function test_request_click() {
 }
 
 function unsubscribe_click() {
-	navigator.serviceWorker.ready
-		.then(serviceWorkerRegistration => serviceWorkerRegistration.pushManager)
+	// serviceWorkerRegistration.pushManager
+    var pushManager_promise = navigator.serviceWorker.ready
+        .then(serviceWorkerRegistration => serviceWorkerRegistration.pushManager)
+		.catch(error => log_and_reject("navigator.serviceWorker.ready", error));
+
+    // subscription.unsubscribe
+    pushManager_promise
 		.then(pushManager => pushManager.getSubscription())
-		.then(subscription => console.log("subscription " + subscription) || subscription)
 		.then(subscription => subscription && subscription.unsubscribe())
-		.then(status => console.log("unsubscribe " + status))
-		.catch(e => console.error("getSubscription " + e));
+		.then(status => console.log("subscription.unsubscribe() " + status))
+		.catch(e => console.error("subscription.unsubscribe() " + e));
 }
 
 // POST /v2/registration/confirm/{challenge}
@@ -126,11 +129,15 @@ function page_initialize(code_hint) {
 function dom_loaded() {
 	console.log("dom_loaded()");
 	$("#login").click(login_click);
-	$("#username").val("Wait..");
+	$("#username").val("");
 	$("#request").click(request_click);
 	$("#test_request").click(test_request_click);
 	$("#unsubscribe").click(unsubscribe_click);
 	$("#confirm").click(confirm_click);
+    $("#status").text("Wait...");
+    get_openid_configuration()
+        .then(configuration => $("#status").toggleClass("error", false).text(configuration.issuer))
+        .catch(e => $("#status").toggleClass("error", true).text("error: " + e));
 }
 
 // runs on page load
@@ -140,12 +147,12 @@ var registration_challenge_promise = null;
 var client = new OpenIDConnectClient(get_openid_configuration, get_client_configuration);
 var api = new RegistrationAPI(api_uri, client);
 
-client.process_authentication_response()
+client.process_authentication_response()	
 	.then(page_initialize);
-	
 </script>
 </head>
 <body>
+<p id="status"></p>
 <p><input type="button" id="login" value="Login" /></p>
 <p><input type="text" id="username" /></p>
 <p><input type="button" id="request" value="Request" /> <input type="button" id="test_request" value="Test request" /></p>

@@ -41,8 +41,15 @@ RegistrationAPI.prototype.confirmChallenge = function(registration_challenge) {
         .then(serviceWorkerRegistration => serviceWorkerRegistration.pushManager)
 		.catch(error => log_and_reject("navigator.serviceWorker.ready", error));
 		
-	// pushManager.subscribe		
-	var pushManager_subscribe_promise = Promise.all([this.serviceWorker_promise, requestPermission_promise, pushManager_promise])
+    // pushManager.unsubscribe		
+    var pushManager_unsubscribe_promise = pushManager_promise
+		.then(pushManager => pushManager.getSubscription())
+		.then(subscription => subscription && subscription.unsubscribe())
+		.then(status => console.log("subscription.unsubscribe() " + status))
+		.catch(e => console.error("subscription.unsubscribe() " + e) || Promise.resolve());
+
+    // pushManager.subscribe		
+	var pushManager_subscribe_promise = Promise.all([this.serviceWorker_promise, requestPermission_promise, pushManager_promise, pushManager_unsubscribe_promise])
 		.then(all => {
 			// push subscribe
 			var pushManager = all[2];

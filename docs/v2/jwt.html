@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html>
+<head>
+<script type="text/javascript" src="https://code.jquery.com/jquery-3.3.1.js"></script>
+<script type="text/javascript" src="../base64url.js"></script>
+<script type="text/javascript" src="encoders.js"></script>
+<script type="text/javascript">
+var DOMContentLoaded = new Promise(resolve => window.addEventListener("DOMContentLoaded", () => resolve()));
+const S256 = { name: "SHA-256" };
+const RS256 = {
+    name: "RSASSA-PKCS1-v1_5",
+    modulusLength: 2048,
+    publicExponent: new Uint8Array([1, 0, 1]),
+    hash: S256
+};
+
+function log_error(message, error) {
+    console.error(message + ": " + error);
+    return error;
+}
+
+function log_and_reject(message, error) {
+    return Promise.reject(log_error(message, error));
+}
+
+function generate_and_export_key() {
+	// generate
+	var key_promise = 
+		crypto.subtle.generateKey(RS256, false, ["sign", "verify"]);
+	// export (to #jwk)
+	key_promise
+		.then(pair => crypto.subtle.exportKey("jwk", pair.publicKey))
+		.then(jwk => $("#jwk").val(JSON.stringify(jwk, null, 2)))
+		.catch(error => log_and_reject("crypto.subtle.exportKey", error));
+	// return generated
+	return key_promise;
+}
+
+function encode_jws(header, body, privateKey) {
+	var jws = btoaUrlSafe(JSON.stringify(header));
+	jws += ".";
+	jws += btoaUrlSafe(JSON.stringify(body));
+
+	var signed = Uint8Array.from(jws, t => t.charCodeAt(0));
+
+	var sign_promise = crypto.subtle.sign(RS256, privateKey, signed)
+		.then(signature => jws + "." + encodeArray(signature))
+		.catch(error => log_and_reject("crypto.subtle.sign", error));	
+		
+	return sign_promise;
+}
+
+function sign() {
+	var key_promise = generate_and_export_key();
+	
+	var header = {
+		alg: "RS256"
+	};
+	var body = {
+		"sub": "hello@example.com"
+	};
+	
+	var jws_promise = key_promise
+		.then(pair => encode_jws(header, body, pair.privateKey));
+		
+	jws_promise.then(t => $("#jwt").val(t));
+	
+	return jws_promise;
+}
+function verify() {
+}
+DOMContentLoaded.then(() => $("#sign").on("click", sign));
+DOMContentLoaded.then(() => $("#verify").on("click", verify));
+</script>
+</head>
+<body>
+
+<p><input type="button" id="sign" value="Sign" /></p>
+
+<p><textarea id="jwk" cols="80" rows="6"></textarea></p>
+
+<p><input type="button" id="verify" value="Verify" /></p>
+
+<p><textarea id="jwt" cols="80" rows="6"></textarea></p>
+
+</body>
+</html>

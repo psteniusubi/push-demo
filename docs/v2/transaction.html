@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>psteniusubi.github.io</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link rel="icon" type="image/png" href="/favicon.png" />
+<style type="text/css">
+body {
+	font-family: sans-serif;
+}
+body .confirm {
+	display:none;
+}
+body.confirm .polling {
+	display:none;
+}
+body.confirm .confirm {
+	display:inline;
+}
+</style>
+<script type="text/javascript" src="https://code.jquery.com/jquery-3.3.1.js"></script>
+<script type="text/javascript" src="../base64url.js"></script>
+<script type="text/javascript" src="encoders.js"></script>
+<script type="text/javascript" src="db.js"></script>
+<script type="text/javascript" src="crypto.js"></script>
+<script type="text/javascript" src="fetch.js"></script>
+<script type="text/javascript" src="transaction-api.js"></script>
+<script type="text/javascript">
+var DOMContentLoaded = new Promise(resolve => window.addEventListener("DOMContentLoaded", () => resolve()));
+
+var api_uri = (location.hostname === "psteniusubi.example.com") 
+    ? "https://api.example.com" 
+    : "https://ubi-push-demo.azurewebsites.net";
+
+function registration() {
+	location.assign("register.html");
+}
+	
+// polling
+
+var poll_timeout_id = 0;
+
+function poll_transaction() {
+	window.clearTimeout(poll_timeout_id);
+	const client_id = api.getClientId();
+	if(!client_id) {
+		registration();
+		return;
+	}
+	$(document.body).toggleClass("confirm", location.hash !== "");
+    api.getList()
+		.then(list => {
+			if(location.hash) {
+                const push_id = location.hash.substr(1);
+				if(!list.includes(push_id)) {
+					location.hash = "";
+				} 
+			} else if(list.length > 0) {
+				location.hash = list[0];
+			} else {
+			}
+			poll_timeout_id = window.setTimeout(poll_transaction, 1000);
+		})
+		.catch(() => registration());
+}
+
+function confirm_click() {
+	console.log("confirm_click()");
+	if(!location.hash) return;
+    const push_id = location.hash.substr(1);
+    api.createChallenge(push_id)
+        .then(transaction_challenge => api.confirmChallenge(push_id, transaction_challenge))
+        .then(() => location.hash = "");
+}
+
+function reject_click() {
+	console.log("reject_click()");
+	if(!location.hash) return;
+    const push_id = location.hash.substr(1);
+    api.rejectChallenge(push_id)
+        .then(() => location.hash = "");
+}
+
+function page_initialize(ready) {
+    if(!ready) {
+        registration();
+        return;
+    }
+    window.addEventListener("hashchange", poll_transaction);
+    poll_transaction();
+    DOMContentLoaded.then(dom_loaded);
+}
+
+function dom_loaded() {
+	console.log("dom_loaded()");
+    $("#confirm").on("click", confirm_click);
+    $("#reject").on("click", reject_click);
+    $("#close").on("click", () => window.close());
+}
+
+var api = new TransactionAPI(api_uri);
+api.ready.then(page_initialize);
+</script>
+</head>
+<body>
+<p><a href="https://psteniusubi.example.com/push-demo/v2/index.html">index.html</a></p>
+<p class="confirm"><input type="button" id="confirm" value="Confirm" /> <input type="button" id="reject" value="Reject" /></p>
+<p class="polling"><input type="button" id="close" value="Close" /></p>
+</body>
+</html>

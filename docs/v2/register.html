@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>psteniusubi.github.io</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link rel="icon" type="image/png" href="/favicon.png" />
+<style type="text/css">
+body {
+	font-family: sans-serif;
+}
+.error {
+    color:red;
+}
+p#status {
+}
+</style>
+<script type="text/javascript" src="https://code.jquery.com/jquery-3.3.1.js"></script>
+<script type="text/javascript" src="../base64url.js"></script>
+<script type="text/javascript" src="encoders.js"></script>
+<script type="text/javascript" src="db.js"></script>
+<script type="text/javascript" src="crypto.js"></script>
+<script type="text/javascript" src="fetch.js"></script>
+<script type="text/javascript" src="oidc.js"></script>
+<script type="text/javascript" src="registration-api.js"></script>
+<script type="text/javascript">
+var DOMContentLoaded = new Promise(resolve => window.addEventListener("DOMContentLoaded", () => resolve()));
+
+var api_uri = (location.hostname === "psteniusubi.example.com") 
+    ? "https://api.example.com" 
+    : "https://ubi-push-demo.azurewebsites.net";
+
+// openid connect client configuration
+
+var client_configuration_promise = null;
+
+function get_client_configuration() {
+    return client_configuration_promise = client_configuration_promise || http_get_json(api_uri + "/v2/registration/configuration");
+}
+
+function get_openid_configuration() {
+    return get_client_configuration()
+        .then(config => http_get_json(config.issuer + "/.well-known/openid-configuration"));
+}
+
+// user interface
+
+function login_click() {
+    console.log("login_click");
+    // send oidc authentication request
+    client.send_authentication_request();
+}
+
+// POST /v2/registration/challenge
+
+function registration_challenge() {
+	var promise = api.createChallenge();
+	Promise.all([promise,DOMContentLoaded])
+		.then(all => $("#username").val(all[0].publicKey.user.name));
+	return promise;
+}
+
+// test
+
+function request_click() {
+    console.log("request_click");
+	registration_challenge_promise = registration_challenge();
+}
+
+// test with mock access token
+
+function test_request_click() {
+    console.log("test_request_click");
+	client = OpenIDConnectClient.CreateMock();
+	api = new RegistrationAPI(api_uri, client);
+	registration_challenge_promise = registration_challenge();
+}
+
+function unsubscribe_click() {
+	// serviceWorkerRegistration.pushManager
+    var pushManager_promise = navigator.serviceWorker.ready
+        .then(serviceWorkerRegistration => serviceWorkerRegistration.pushManager)
+		.catch(error => log_and_reject("navigator.serviceWorker.ready", error));
+
+    // subscription.unsubscribe
+    pushManager_promise
+		.then(pushManager => pushManager.getSubscription())
+		.then(subscription => subscription && subscription.unsubscribe())
+		.then(status => console.log("subscription.unsubscribe() " + status))
+		.catch(e => console.error("subscription.unsubscribe() " + e));
+}
+
+// POST /v2/registration/confirm/{challenge}
+
+function registration_confirm() {
+    return registration_challenge_promise
+        .then(registration_challenge => api.confirmChallenge(registration_challenge));     
+}
+
+function confirm_click() {
+	var registration_confirm_promise = registration_confirm();
+	registration_confirm_promise
+		.then(json => $("#client_id").val(json.client_id));
+	registration_confirm_promise
+		.then(json => {
+			localStorage.setItem("client_id", json.client_id);
+			transaction();
+		});
+}
+
+function transaction() {
+    var client_id = localStorage.getItem("client_id");
+    if(client_id) {
+        http_get_json(api.uri + "/v2/transaction/client/" + encodeURIComponent(client_id))
+            .then(list => console.log(encodeJson(list)) || list)
+            .then(list => list.length > 0 ? location.assign("transaction.html#" + encodeURIComponent(list[0])) : location.assign("transaction.html"));
+    }
+}
+
+function page_initialize(code_hint) {
+	console.log("page_initialize(" + code_hint + ")");
+	if(code_hint) {
+		registration_challenge_promise = registration_challenge();
+	} else {
+        transaction();
+	}
+	DOMContentLoaded.then(dom_loaded);
+}
+
+function dom_loaded() {
+	console.log("dom_loaded()");
+	$("#login").click(login_click);
+	$("#username").val("");
+	$("#request").click(request_click);
+	$("#test_request").click(test_request_click);
+	$("#unsubscribe").click(unsubscribe_click);
+	$("#confirm").click(confirm_click);
+    $("#status").text("Wait...");
+    get_openid_configuration()
+        .then(configuration => $("#status").toggleClass("error", false).text(configuration.issuer))
+        .catch(e => $("#status").toggleClass("error", true).text("error: " + e));
+}
+
+// runs on page load
+
+var registration_challenge_promise = null;
+
+var client = new OpenIDConnectClient(get_openid_configuration, get_client_configuration);
+var api = new RegistrationAPI(api_uri, client);
+
+client.process_authentication_response()	
+	.then(page_initialize);
+</script>
+</head>
+<body>
+<p id="status"></p>
+<p><input type="button" id="login" value="Login" /></p>
+<p><input type="text" id="username" /></p>
+<p><input type="button" id="request" value="Request" /> <input type="button" id="test_request" value="Test request" /></p>
+<p><input type="button" id="unsubscribe" value="Unsubscribe" /></p>
+<p><input type="button" id="confirm" value="Confirm" /></p>
+<p><input type="text" id="client_id" /></p>
+</body>
+</html>

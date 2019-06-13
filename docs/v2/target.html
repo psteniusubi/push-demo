@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+
+<style type="text/css">
+p.page {
+	display: none;
+}
+p.page:target ~ p.page {
+	display: none !important;
+}
+p.page:target, p#default {
+	color: red;
+	display: block;
+}
+</style>
+
+<p class="page" id="id1">id1</p>
+<p class="page" id="id2">id2</p>
+<p class="page" id="id3">id3</p>
+<p class="page" id="default">default</p>
+
+<a href="#">#</a>
+<a href="#id1">#id1</a>
+<a href="#id2">#id2</a>
+<a href="#id3">#id3</a>
+<a href="#default">#default</a>
+
+<!--
+p#id1:target {
+	color: red;
+	display: block;
+}
+p#id2:target {
+	color: red;
+	display: block;
+}
+p#id3:target {
+	color: red;
+	display: block;
+}
+
+-->

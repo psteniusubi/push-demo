@@ -4,46 +4,16 @@
 <meta name="format-detection" content="telephone=no" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <link href="../256.png" rel="icon" type="image/png" />
+<link href="layout.css" rel="stylesheet" type="text/css" /> 
 <style type="text/css">
-body {
-	margin:0;
-	font-family: sans-serif;
+div.page {
+	display: none;
 }
-div#wrapper {
-	display: grid;
-	grid-template-columns: 1fr 3fr;
-	grid-template-rows: 1fr 1fr 2fr;
-	min-height: 100vh;
+div.page:target ~ div.page {
+	display: none !important;
 }
-div#left img {
-	height: 5em;
-	padding-right: 0.5em;
-}
-div#left {
-	grid-column: 1;
-	grid-row: 2;
-	align-self: center;
-	justify-self: end;
-}
-div#right {
-	grid-column: 2;
-	grid-row: 2;
-	align-self: center;
-}
-div#right span {
-	font-weight: bold;
-}
-div#right h1 {
-	font-size: large;
-}
-div#right div {
-	margin-top: 0.5em;
-}
-div#right input {
-	font-size: large;
-}
-div.button {
-	padding-top: 0.5em;
+div.page:target, div#initial {
+	display: block;
 }
 </style>
 </head>
@@ -52,20 +22,69 @@ div.button {
 <div id="wrapper">
 
 <div id="left">
-<img src="../256.png" />
+	<img src="../256.png" />
 </div>
 
-<div id="right">
-<h1>Sign-in request 2f7874</h1>
-<div>Request <span id="binding_message">2f7874</span> from <span id="remote_addr">192.168.0.13</span> to <span id="client_name">www.ubisecure.com</span></div>
-<div id="login_hint"><span>hello@example.com</span></div>
-<div class="button">
-<input type="button" value="Confirm" autofocus="autofocus" />
-<input type="button" value="Cancel" />
-</div>
-</div>
+<div class="page" id="login">
+
+	<h1>Confirm</h1>
+	
+	<div>Confirm registration with following username</div>
+
+	<div id="login_hint"><span>hello@example.com</span></div>
+
+	<div class="button">
+		<input type="button" value="Next" autofocus="autofocus" onclick="location.hash='wait'" />
+		<input type="button" value="Cancel" onclick="location.hash='initial'" />
+	</div>
 
 </div>
+
+<div class="page" id="wait">
+
+	<h1>Ready</h1>
+	
+	<div>Waiting for sign-in request</div>
+
+	<div>You can close this browser window</div>
+
+	<div class="button">
+		<input type="button" value="Next" autofocus="autofocus" onclick="location.hash='confirm'"/>
+		<input type="button" value="Cancel" onclick="location.hash='initial'"/>
+	</div>
+
+</div>
+
+<div class="page" id="confirm">
+
+	<h1>Sign-in request 2f7874</h1>
+
+	<div>Request <span id="binding_message">2f7874</span> from <span id="remote_addr">192.168.0.13</span> to <span id="client_name">www.ubisecure.com</span></div>
+
+	<div id="login_hint"><span>hello@example.com</span></div>
+
+	<div class="button">
+		<input type="button" value="Confirm" autofocus="autofocus" onclick="location.hash='wait'" />
+		<input type="button" value="Reject" onclick="location.hash='wait'" />
+	</div>
+
+</div>
+
+<div class="page" id="initial">
+
+	<h1>Registration</h1>
+
+	<div>Click Next to start registration</div>
+
+	<div>&nbsp;</div>
+
+	<div class="button">
+		<input type="button" value="Next" autofocus="autofocus" onclick="location.hash='login'" />
+	</div>
+
+</div>
+
+</div> <!-- wrapper -->
 
 </body>
 </html>

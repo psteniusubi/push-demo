@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="format-detection" content="telephone=no" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link href="../256.png" rel="icon" type="image/png" />
+<style type="text/css">
+body {
+	margin:0;
+	font-family: sans-serif;
+}
+div#wrapper {
+	display: grid;
+	grid-template-columns: 1fr 3fr;
+	grid-template-rows: 1fr 1fr 2fr;
+	min-height: 100vh;
+}
+div#left img {
+	height: 5em;
+	padding-right: 0.5em;
+}
+div#left {
+	grid-column: 1;
+	grid-row: 2;
+	align-self: center;
+	justify-self: end;
+}
+div#right {
+	grid-column: 2;
+	grid-row: 2;
+	align-self: center;
+}
+div#right span {
+	font-weight: bold;
+}
+div#right h1 {
+	font-size: large;
+}
+div#right div {
+	margin-top: 0.5em;
+}
+div#right input {
+	font-size: large;
+}
+div.button {
+	padding-top: 0.5em;
+}
+</style>
+</head>
+<body>
+
+<div id="wrapper">
+
+<div id="left">
+<img src="../256.png" />
+</div>
+
+<div id="right">
+<h1>Sign-in request 2f7874</h1>
+<div>Request <span id="binding_message">2f7874</span> from <span id="remote_addr">192.168.0.13</span> to <span id="client_name">www.ubisecure.com</span></div>
+<div id="login_hint"><span>hello@example.com</span></div>
+<div class="button">
+<input type="button" value="Confirm" autofocus="autofocus" />
+<input type="button" value="Cancel" />
+</div>
+</div>
+
+</div>
+
+</body>
+</html>

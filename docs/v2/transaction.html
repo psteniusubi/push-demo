@@ -2,20 +2,22 @@
 <html>
 <head>
 <title>psteniusubi.github.io</title>
+<meta name="format-detection" content="telephone=no" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<link rel="icon" type="image/png" href="/favicon.png" />
+<link href="../256.png" rel="icon" type="image/png" />
+<link href="layout.css" rel="stylesheet" type="text/css" /> 
 <style type="text/css">
-body {
-	font-family: sans-serif;
+.error {
+    color:red;
 }
-body .confirm {
-	display:none;
+.hidden {
+    display:none;
 }
-body.confirm .polling {
-	display:none;
+#confirm_message span {
+	font-weight: normal;
 }
-body.confirm .confirm {
-	display:inline;
+#confirm_message span.bold {
+	font-weight: bold;
 }
 </style>
 <script type="text/javascript" src="https://code.jquery.com/jquery-3.3.1.js"></script>
@@ -33,7 +35,40 @@ var api_uri = (location.hostname === "psteniusubi.example.com")
     : "https://ubi-push-demo.azurewebsites.net";
 
 function registration() {
-	location.assign("register.html");
+    console.error("registration()");
+	//location.assign("register.html");
+}
+
+// transaction
+
+var get_transaction_promise = null;
+
+function show_transaction(json) {
+    console.log(encodeJson(json));
+    var confirm_message = $("#confirm_message").empty();
+    var login_hint = $("#login_hint").empty();
+    confirm_message.append($("<span>").text("Request "));
+    if(json.pushRequest.binding_message) {
+        confirm_message.append($("<span>").addClass("bold").text(json.pushRequest.binding_message));
+    }
+    if(json.pushRequest.client_addr) {
+        confirm_message.append($("<span>").text(" from "));
+        confirm_message.append($("<span>").addClass("bold").text(json.pushRequest.client_addr));
+    }
+    if(json.pushRequest.client_name) {
+        confirm_message.append($("<span>").text(" to "));
+        confirm_message.append($("<span>").addClass("bold").text(json.pushRequest.client_name));
+    }
+    if(json.pushRequest.login_hint) {
+        login_hint.text(json.pushRequest.login_hint);
+    }
+}
+
+function get_transaction(push_id) {
+    if(!get_transaction_promise) {
+        get_transaction_promise = api.getTransaction(push_id)
+            .then(json => show_transaction(json) || json);
+    }
 }
 	
 // polling
@@ -47,17 +82,24 @@ function poll_transaction() {
 		registration();
 		return;
 	}
-	$(document.body).toggleClass("confirm", location.hash !== "");
+    if(location.hash === "") {
+        get_transaction_promise = null;
+    }
+    $("#wait_transaction").toggleClass("hidden", location.hash !== "");
+    $("#confirm_transaction").toggleClass("hidden", location.hash === "");
     api.getList()
 		.then(list => {
 			if(location.hash) {
                 const push_id = location.hash.substr(1);
-				if(!list.includes(push_id)) {
+				if(list.includes(push_id)) {
+                    get_transaction(push_id);
+                } else {
 					location.hash = "";
 				} 
 			} else if(list.length > 0) {
 				location.hash = list[0];
 			} else {
+                // nothing
 			}
 			poll_timeout_id = window.setTimeout(poll_transaction, 1000);
 		})
@@ -93,9 +135,9 @@ function page_initialize(ready) {
 
 function dom_loaded() {
 	console.log("dom_loaded()");
-    $("#confirm").on("click", confirm_click);
-    $("#reject").on("click", reject_click);
-    $("#close").on("click", () => window.close());
+    $("#wait_close").on("click", () => window.close());
+    $("#confirm_ok").on("click", confirm_click);
+    $("#confirm_reject").on("click", reject_click);
 }
 
 var api = new TransactionAPI(api_uri);
@@ -103,8 +145,46 @@ api.ready.then(page_initialize);
 </script>
 </head>
 <body>
+<div id="wrapper">
+
+<div id="left">
+	<img src="../256.png" />
+</div>
+
+<div class="page" id="wait_transaction">
+
+	<h1>Ready</h1>
+
+	<div>Wating for sign-in request</div>
+
+	<div><span id="status">&nbsp;</span></div>
+
+	<div class="button">
+		<input id="wait_close" type="button" value="Close" autofocus="autofocus" />
+	</div>
+
+</div>
+
+<div class="page hidden" id="confirm_transaction">
+
+	<h1>Sign-in request</h1>
+
+	<div id="confirm_message">Request <span>000000</span> from <span>0.0.0.0</span> to <span>example.com</span></div>
+
+	<div><span id="login_hint">Wait...</span></div>
+
+	<div class="button">
+		<input id="confirm_ok" type="button" value="Confirm" autofocus="autofocus" />
+		<input id="confirm_reject" type="button" value="Reject" />
+	</div>
+
+</div>
+
+</div>
+<!--
 <p><a href="https://psteniusubi.example.com/push-demo/v2/index.html">index.html</a></p>
 <p class="confirm"><input type="button" id="confirm" value="Confirm" /> <input type="button" id="reject" value="Reject" /></p>
 <p class="polling"><input type="button" id="close" value="Close" /></p>
+-->
 </body>
 </html>

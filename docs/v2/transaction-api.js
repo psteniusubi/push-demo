@@ -29,6 +29,11 @@ TransactionAPI.prototype.getList = function() {
         .catch(() => Promise.reject());
 }
 
+TransactionAPI.prototype.getTransaction = function(push_id) {
+    return http_get_json(this.uri + "/v2/transaction/id/" + encodeURIComponent(push_id))
+        .catch(() => Promise.reject());
+}
+
 TransactionAPI.prototype.createChallenge = function(push_id) {
 	console.log("TransactionAPI.createChallenge()");
     const clientId = this.getClientId();

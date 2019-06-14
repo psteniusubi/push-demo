@@ -3,15 +3,14 @@
 <head>
 <title>psteniusubi.github.io</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<link rel="icon" type="image/png" href="/favicon.png" />
+<link href="../256.png" rel="icon" type="image/png" />
+<link href="layout.css" rel="stylesheet" type="text/css" /> 
 <style type="text/css">
-body {
-	font-family: sans-serif;
-}
 .error {
     color:red;
 }
-p#status {
+.hidden {
+    display:none;
 }
 </style>
 <script type="text/javascript" src="https://code.jquery.com/jquery-3.3.1.js"></script>
@@ -55,7 +54,7 @@ function login_click() {
 function registration_challenge() {
 	var promise = api.createChallenge();
 	Promise.all([promise,DOMContentLoaded])
-		.then(all => $("#username").val(all[0].publicKey.user.name));
+		.then(all => $("#login_hint").text(all[0].publicKey.user.name));
 	return promise;
 }
 
@@ -99,8 +98,6 @@ function registration_confirm() {
 function confirm_click() {
 	var registration_confirm_promise = registration_confirm();
 	registration_confirm_promise
-		.then(json => $("#client_id").val(json.client_id));
-	registration_confirm_promise
 		.then(json => {
 			localStorage.setItem("client_id", json.client_id);
 			transaction();
@@ -123,21 +120,24 @@ function page_initialize(code_hint) {
 	} else {
         transaction();
 	}
-	DOMContentLoaded.then(dom_loaded);
+	DOMContentLoaded.then(() => dom_loaded(code_hint));
 }
 
-function dom_loaded() {
-	console.log("dom_loaded()");
-	$("#login").click(login_click);
-	$("#username").val("");
-	$("#request").click(request_click);
-	$("#test_request").click(test_request_click);
-	$("#unsubscribe").click(unsubscribe_click);
-	$("#confirm").click(confirm_click);
-    $("#status").text("Wait...");
-    get_openid_configuration()
-        .then(configuration => $("#status").toggleClass("error", false).text(configuration.issuer))
-        .catch(e => $("#status").toggleClass("error", true).text("error: " + e));
+function dom_loaded(code_hint) {
+	console.log("dom_loaded(" + code_hint + ")");
+	$("#login_next").click(login_click);
+	$("#confirm_next").click(confirm_click);
+    if(code_hint) {
+        $("#start_registration").toggleClass("hidden", true);
+        $("#confirm_registration").toggleClass("hidden", false);
+    } else {
+        $("#confirm_registration").toggleClass("hidden", true);
+        $("#start_registration").toggleClass("hidden", false);
+        get_openid_configuration()
+            //.then(configuration => $("#status").toggleClass("error", false).text(configuration.issuer))
+            .then(configuration => $("#status").toggleClass("error", false).text("\u00a0"))
+            .catch(e => $("#status").toggleClass("error", true).text("error: " + e));
+    }
 }
 
 // runs on page load
@@ -152,12 +152,40 @@ client.process_authentication_response()
 </script>
 </head>
 <body>
-<p id="status"></p>
-<p><input type="button" id="login" value="Login" /></p>
-<p><input type="text" id="username" /></p>
-<p><input type="button" id="request" value="Request" /> <input type="button" id="test_request" value="Test request" /></p>
-<p><input type="button" id="unsubscribe" value="Unsubscribe" /></p>
-<p><input type="button" id="confirm" value="Confirm" /></p>
-<p><input type="text" id="client_id" /></p>
+<div id="wrapper">
+
+<div id="left">
+	<img src="../256.png" />
+</div>
+
+<div class="page" id="start_registration">
+
+	<h1>Registration</h1>
+
+	<div>Click Next to start registration</div>
+
+	<div><span id="status">Wait...</span></div>
+
+	<div class="button">
+		<input id="login_next" type="button" value="Next" autofocus="autofocus" />
+	</div>
+
+</div>
+
+<div class="page hidden" id="confirm_registration">
+
+	<h1>Confirm</h1>
+
+	<div>Confirm registration with following username</div>
+
+	<div><span id="login_hint">Wait...</span></div>
+
+	<div class="button">
+		<input id="confirm_next" type="button" value="Next" autofocus="autofocus" />
+	</div>
+
+</div>
+
+</div>
 </body>
 </html>

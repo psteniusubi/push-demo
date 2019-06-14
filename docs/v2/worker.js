@@ -23,19 +23,20 @@ self.addEventListener("notificationclick", event => {
 		var message = data.message;
 		var uri = location.origin + "/push-demo/v2/transaction.html#" + message.push_id;
 		console.log("notificationclick uri=" + uri);
-        var navigate = self.clients.matchAll()
+        var options = {
+            includeUncontrolled: false,
+            type: "window"
+        };
+        var navigate = self.clients.matchAll(options)
             .then(clients => {
-                var list = [];
-                clients.forEach(client => {
+                for(var i in clients) {
                     console.log("navigate " + uri);
-                    list.push(client.navigate(uri).then(client => client.focus()));
-                });
-                if(list.length == 0) {
-                    console.log("openWindow " + uri);
-                    list.push(self.clients.openWindow(uri));
+                    clients[i].url = uri;
+                    return clients[i].focus();
                 }
-                return Promise.all(list);
-            });
+                console.log("openWindow " + uri);
+                return self.clients.openWindow(uri);
+            });            
         event.waitUntil(navigate);
 	}
 });

@@ -1,3 +1,3 @@
 # Push Notifications for Web Applications
 
-https://psteniusubi.github.io/push-demo/
+https://psteniusubi.github.io/push-demo/v2/

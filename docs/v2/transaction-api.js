@@ -1,7 +1,9 @@
-function TransactionAPI(uri) {
+function TransactionAPI(uri, db) {
     if(typeof uri !== "string") throw "illegal argument";
+	if(db.constructor !== AuthenticatorDB) throw "illegal argument";
     const self = this;
 	this.uri = uri;
+    this.db = db;
     // service worker
     if(navigator.serviceWorker) {
         this.serviceWorker_promise = navigator.serviceWorker.register("/push-demo/v2/worker.js", { scope: "/push-demo/v2/" })
@@ -10,8 +12,6 @@ function TransactionAPI(uri) {
     } else {
         this.serviceWorker_promise = Promise.resolve();
     }
-    // AuthenticatorDB
-    this.db = new AuthenticatorDB();
     this.clientId = null;
     this.keyPair = null;
     this.ready = new Promise((resolve,reject) => {

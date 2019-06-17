@@ -1,10 +1,12 @@
-function RegistrationAPI(uri, client) {
+function RegistrationAPI(uri, client, db) {
     if(typeof uri !== "string") throw "illegal argument";
 	if(typeof client !== "object") throw "illegal argument";
 	if(client.constructor !== OpenIDConnectClient) throw "illegal argument";
+	if(db.constructor !== AuthenticatorDB) throw "illegal argument";
     const self = this;
 	this.uri = uri;
 	this.client = client;
+    this.db = db;
     // service worker
     if(!navigator.serviceWorker) {
         throw "serviceWorker is not available";
@@ -12,7 +14,6 @@ function RegistrationAPI(uri, client) {
     this.serviceWorker_promise = navigator.serviceWorker.register("/push-demo/v2/worker.js", { scope: "/push-demo/v2/" })
         .then(reg => console.log("register worker.js " + reg) || reg)
         .catch(error => log_and_reject("navigator.serviceWorker.register(worker.js)", error));
-    this.db = new AuthenticatorDB();
     // application key	
     this.keyPair_promise = this.db.getOrGenerateKeyPair();
     this.jwk_promise = this.keyPair_promise

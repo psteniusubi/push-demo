@@ -12,6 +12,10 @@ AuthenticatorDB.prototype.openDb = function() {
         .then(() => db_open("Authenticator"));
 }
 
+AuthenticatorDB.prototype.deleteDb = function() {
+    return db_delete("Authenticator");
+}
+
 AuthenticatorDB.prototype.getClientId = function() {
     var db_promise = this.openDb();
     var get_promise = db_promise

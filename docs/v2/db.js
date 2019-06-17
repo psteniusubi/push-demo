@@ -40,7 +40,7 @@ function db_delete(name) {
 		var req = indexedDB.deleteDatabase(name);
 		req.onsuccess = () => {
 			console.log("indexedDB.deleteDatabase.onsuccess");
-			resolve();
+			resolve(true);
 		};
 		req.onerror = e => {
 			console.log("indexedDB.deleteDatabase.onerror");

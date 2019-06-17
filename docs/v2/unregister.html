@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+
+<style type="text/css">
+.error {
+    color:red;
+}
+</style>
+<script type="text/javascript" src="https://code.jquery.com/jquery-3.3.1.js"></script>
+<script type="text/javascript" src="db.js"></script>
+<script type="text/javascript">
+var DOMContentLoaded = new Promise(resolve => window.addEventListener("DOMContentLoaded", () => resolve()));
+DOMContentLoaded.then(() => {
+    navigator.serviceWorker.ready
+        .then(serviceWorkerRegistration => serviceWorkerRegistration.unregister())
+        .then(status => $("#serviceWorker").text(status))
+        .catch(e => $("#serviceWorker").addClass("error").text(e))
+    var del1 = db_delete("Authenticator");
+    var del2 = db_delete("crypto");
+    Promise.all([del1,del2])
+        .then(all => $("#db_delete").text(all[0]))
+        .catch(e => $("#db_delete").addClass("error").text(e))
+    localStorage.removeItem("subid");
+    localStorage.removeItem("client_id");
+});
+</script>
+
+<div>serviceWorker.unregister() <span id="serviceWorker" /></div>
+<div>db_delete() <span id="db_delete" /></div>

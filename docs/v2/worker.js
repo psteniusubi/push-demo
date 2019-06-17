@@ -11,10 +11,13 @@ self.importScripts(
     "transaction-api.js"
 );
 
+self.db = new AuthenticatorDB();
+
 self.api = new TransactionAPI(
     (location.hostname === "psteniusubi.example.com") 
         ? "https://api.example.com" 
-        : "https://ubi-push-demo.azurewebsites.net"
+        : "https://ubi-push-demo.azurewebsites.net",
+    self.db
 );
 
 self.addEventListener("install", event => {

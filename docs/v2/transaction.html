@@ -140,7 +140,8 @@ function dom_loaded() {
     $("#confirm_reject").on("click", reject_click);
 }
 
-var api = new TransactionAPI(api_uri);
+var db = new AuthenticatorDB();
+var api = new TransactionAPI(api_uri, db);
 api.ready.then(page_initialize);
 </script>
 </head>

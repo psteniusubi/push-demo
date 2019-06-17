@@ -144,7 +144,8 @@ function dom_loaded(code_hint) {
 var registration_challenge_promise = null;
 
 var client = new OpenIDConnectClient(get_openid_configuration, get_client_configuration);
-var api = new RegistrationAPI(api_uri, client);
+var db = new AuthenticatorDB();
+var api = new RegistrationAPI(api_uri, client, db);
 
 client.process_authentication_response()	
 	.then(page_initialize);

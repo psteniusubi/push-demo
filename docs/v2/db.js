@@ -3,15 +3,15 @@ function db_create(name, upgrade) {
 		console.log("IDBFactory.open(" + name + ")");
 		var req = indexedDB.open(name, 1);	
 		req.onupgradeneeded = () => {
-			console.log("IDBOpenDBRequest.onupgradeneeded");
+			console.log("indexedDB.open.onupgradeneeded");
             upgrade(req.result);
 		};
 		req.onsuccess = () => {
-			console.log("IDBOpenDBRequest.onsuccess");
+			console.log("indexedDB.open.onsuccess");
 			resolve(req.result);
 		};
 		req.onerror = e => {
-			console.log("IDBOpenDBRequest.onerror");
+			console.log("indexedDB.open.onerror");
 			reject(e);
 		};
 	});
@@ -21,15 +21,15 @@ function db_open(name) {
 		console.log("IDBFactory.open(" + name + ")");
 		var req = indexedDB.open(name, 1);	
 		req.onupgradeneeded = () => {
-			console.log("IDBOpenDBRequest.onupgradeneeded");
+			console.log("indexedDB.open.onupgradeneeded");
             reject();
 		};
 		req.onsuccess = () => {
-			console.log("IDBOpenDBRequest.onsuccess");
+			console.log("indexedDB.open.onsuccess");
 			resolve(req.result);
 		};
 		req.onerror = e => {
-			console.log("IDBOpenDBRequest.onerror");
+			console.log("indexedDB.open.onerror");
 			reject(e);
 		};
 	});
@@ -39,11 +39,11 @@ function db_delete(name) {
 		console.log("IDBFactory.deleteDatabase(" + name + ")");
 		var req = indexedDB.deleteDatabase(name);
 		req.onsuccess = () => {
-			console.log("IDBOpenDBRequest.onsuccess");
+			console.log("indexedDB.deleteDatabase.onsuccess");
 			resolve();
 		};
 		req.onerror = e => {
-			console.log("IDBOpenDBRequest.onerror");
+			console.log("indexedDB.deleteDatabase.onerror");
 			reject(e);
 		};
 	});
@@ -69,7 +69,30 @@ function db_get(db, name, id) {
         var store = tx.objectStore(name);
 		console.log("IDBObjectStore.get(" + id + ")");
         var request = store.get(id);
-        request.onsuccess = () => resolve(request.result);
+        request.onsuccess = () => request.result ? resolve(request.result) : reject("RecordNotFound");
+        request.onerror = () => reject("error");
+    });
+}
+function db_update(db, name, id, update) {
+    return new Promise((resolve, reject) => {
+		console.log("IDBDatabase.transaction(" + db.name + ")");
+        var tx = db.transaction([name], "readwrite");        
+        tx.oncomplete = () => resolve(db);
+        tx.onabort = () => reject("abort");
+        tx.onerror = () => reject("error");
+		console.log("IDBTransaction.objectStore(" + name + ")");
+        var store = tx.objectStore(name);
+		console.log("IDBObjectStore.get(" + id + ")");
+        var request = store.get(id);
+        request.onsuccess = () => {
+            if(request.result) {
+                update(request.result);
+                console.log("IDBObjectStore.put(" + request.result + ")");
+                store.put(request.result);
+            } else {
+                reject("RecordNotFound");
+            }
+        };
         request.onerror = () => reject("error");
     });
 }

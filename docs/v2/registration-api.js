@@ -6,14 +6,21 @@ function RegistrationAPI(uri, client) {
 	this.uri = uri;
 	this.client = client;
     // service worker
+    if(!navigator.serviceWorker) {
+        throw "serviceWorker is not available";
+    }
     this.serviceWorker_promise = navigator.serviceWorker.register("/push-demo/v2/worker.js", { scope: "/push-demo/v2/" })
         .then(reg => console.log("register worker.js " + reg) || reg)
         .catch(error => log_and_reject("navigator.serviceWorker.register(worker.js)", error));
+    this.db = new AuthenticatorDB();
     // application key	
-    this.keyPair_promise = getKey()
-        .catch(() => Promise.resolve(generateKey()))
+    this.keyPair_promise = this.db.getOrGenerateKeyPair();
     this.jwk_promise = this.keyPair_promise
-        .then(keyPair => exportKey(keyPair.publicKey))
+        .then(keyPair => crypto.subtle.exportKey("jwk", keyPair.publicKey));
+}
+
+RegistrationAPI.prototype.getClientId = function() {
+    return this.db.getClientId();
 }
 
 RegistrationAPI.prototype.createChallenge = function() {
@@ -84,6 +91,7 @@ RegistrationAPI.prototype.confirmChallenge = function(registration_challenge) {
 				.then(response => response.ok ? as_json(response) : http_reject(request, response));
 		})
         .then(json => console.log("RegistrationConfirmResponse " + encodeJson(json)) || json)
+        .then(json => { this.db.setClientId(json.client_id); return json; })
 		.catch(error => log_and_reject("registration_confirm", error));	
 }
 

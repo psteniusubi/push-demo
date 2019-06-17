@@ -1,4 +1,21 @@
+// version 1
+
 console.log("worker.js");
+
+self.importScripts(
+    "../base64url.js",
+    "encoders.js",
+    "db.js",
+    "authenticator-db.js",
+    "fetch.js",
+    "transaction-api.js"
+);
+
+self.api = new TransactionAPI(
+    (location.hostname === "psteniusubi.example.com") 
+        ? "https://api.example.com" 
+        : "https://ubi-push-demo.azurewebsites.net"
+);
 
 self.addEventListener("install", event => {
 	console.log("install " + event);
@@ -21,6 +38,17 @@ self.addEventListener("notificationclick", event => {
     var data = event.notification.data;
 	if(data && data.message) {
 		var message = data.message;
+        if(event.action === "approve") {
+            console.log("approve");
+            event.waitUntil(self.api.confirmChallenge(message.push_id, {client_id:null,pushRequest:null,publicKey:null}));
+            return;
+        } else if(event.action === "reject") {
+            console.log("reject");
+            event.waitUntil(self.api.rejectChallenge(message.push_id));
+            return;
+        } else {
+            console.log("open");
+        }
 		var uri = location.origin + "/push-demo/v2/transaction.html#" + message.push_id;
 		console.log("notificationclick uri=" + uri);
         var options = {
@@ -32,6 +60,7 @@ self.addEventListener("notificationclick", event => {
                 for(var i in clients) {
                     console.log("navigate " + uri);
                     clients[i].url = uri;
+                    clients[i].navigate(uri);
                     return clients[i].focus();
                 }
                 console.log("openWindow " + uri);
@@ -53,15 +82,21 @@ self.addEventListener("push", event => {
 	if(message.client_addr) body += " from " + message.client_addr;
 	if(message.client_name) body += " to " + message.client_name;
 	body += "\r\n" + message.login_hint;
+    var actions = (message.acr_values === "1")
+        ? [
+			{ action: "approve", title: "Approve" },
+			{ action: "reject", title: "Reject" }
+		]
+        : [
+			{ action: "open", title: "Open" },
+			{ action: "reject", title: "Reject" }
+		];
 	var options = {
 		body: body,
 		icon: "/push-demo/256.png",
 		badge: "/push-demo/256bw.png",
 		tag: location.origin,
-		actions: [
-			{ action: "open", title: "Open" },
-			{ action: "reject", title: "Reject" }
-		],
+		actions: actions,
 		data: {
 			message: message
 		}

@@ -13,7 +13,7 @@ function exportKey(publicKey) {
 }
 
 function getKey() {
-    var db_promise = db_open("crypto");
+    var db_promise = db_open("Authenticator");
     var get_promise = db_promise.then(db => db_get(db, "KeyPair", 0));
     var key_promise = get_promise.then(item => item ? ( {publicKey: item.publicKey, privateKey: item.privateKey} ) : Promise.reject("KeyPairNotFound"));
 	return Promise.all([db_promise, key_promise])
@@ -25,8 +25,9 @@ function getKey() {
 }
 
 function generateKey() {
-    var db_promise = db_delete("crypto")
-        .then(() => db_create("crypto", db => db.createObjectStore("KeyPair", { keyPath: "id" })));
+    db_delete("crypto"); // cleanup
+    var db_promise = db_delete("Authenticator")
+        .then(() => db_create("Authenticator", db => db.createObjectStore("KeyPair", { keyPath: "id" })));
     var key_promise = crypto.subtle.generateKey(RS256, false, ["sign", "verify"]);
 //    var jwk_promise = key_promise.then(keyPair => exportKey(keyPair.publicKey))
 //        .then(jwk => $("#jwk").text(jwk));

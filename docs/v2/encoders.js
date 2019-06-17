@@ -17,34 +17,36 @@ function replacer(k,v) {
 		return encodeArray(v);
 		//return "["+encodeArray(v)+"]";
 	}
-	if(v && v.constructor === PublicKeyCredential) {
-		return {
-			// https://w3c.github.io/webappsec-credential-management/#credential
-			id: v.id,
-			type: v.type,
-			// https://w3c.github.io/webauthn/#publickeycredential
-			rawId: v.rawId,
-			response: v.response,
-		};
-	}
-	if(v && v.constructor === AuthenticatorAttestationResponse) {
-		return {
-			// https://w3c.github.io/webauthn/#authenticatorresponse
-			clientDataJSON: v.clientDataJSON,
-			// https://w3c.github.io/webauthn/#authenticatorattestationresponse
-			attestationObject: v.attestationObject, 
-		};
-	}
-	if(v && v.constructor === AuthenticatorAssertionResponse) {
-		return {
-			// https://w3c.github.io/webauthn/#authenticatorresponse
-			clientDataJSON: v.clientDataJSON,
-			// https://w3c.github.io/webauthn/#authenticatorassertionresponse
-			authenticatorData: v.authenticatorData, 
-			signature: v.signature, 
-			userHandle: v.userHandle, 
-		};
-	}
+    if(typeof navigator.credentials === "object") {
+        if(v && v.constructor === PublicKeyCredential) {
+            return {
+                // https://w3c.github.io/webappsec-credential-management/#credential
+                id: v.id,
+                type: v.type,
+                // https://w3c.github.io/webauthn/#publickeycredential
+                rawId: v.rawId,
+                response: v.response,
+            };
+        }
+        if(v && v.constructor === AuthenticatorAttestationResponse) {
+            return {
+                // https://w3c.github.io/webauthn/#authenticatorresponse
+                clientDataJSON: v.clientDataJSON,
+                // https://w3c.github.io/webauthn/#authenticatorattestationresponse
+                attestationObject: v.attestationObject, 
+            };
+        }
+        if(v && v.constructor === AuthenticatorAssertionResponse) {
+            return {
+                // https://w3c.github.io/webauthn/#authenticatorresponse
+                clientDataJSON: v.clientDataJSON,
+                // https://w3c.github.io/webauthn/#authenticatorassertionresponse
+                authenticatorData: v.authenticatorData, 
+                signature: v.signature, 
+                userHandle: v.userHandle, 
+            };
+        }
+    }
 	if(v && v.constructor === CryptoKey) {
 		return {
 			// https://w3c.github.io/webcrypto/#cryptokey-interface

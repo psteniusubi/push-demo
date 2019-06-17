@@ -17,7 +17,7 @@
 <script type="text/javascript" src="../base64url.js"></script>
 <script type="text/javascript" src="encoders.js"></script>
 <script type="text/javascript" src="db.js"></script>
-<script type="text/javascript" src="crypto.js"></script>
+<script type="text/javascript" src="authenticator-db.js"></script>
 <script type="text/javascript" src="fetch.js"></script>
 <script type="text/javascript" src="oidc.js"></script>
 <script type="text/javascript" src="registration-api.js"></script>
@@ -98,19 +98,18 @@ function registration_confirm() {
 function confirm_click() {
 	var registration_confirm_promise = registration_confirm();
 	registration_confirm_promise
-		.then(json => {
-			localStorage.setItem("client_id", json.client_id);
-			transaction();
-		});
+		.then(() => transaction());
 }
 
 function transaction() {
-    var client_id = localStorage.getItem("client_id");
-    if(client_id) {
-        http_get_json(api.uri + "/v2/transaction/client/" + encodeURIComponent(client_id))
-            .then(list => console.log(encodeJson(list)) || list)
-            .then(list => list.length > 0 ? location.assign("transaction.html#" + encodeURIComponent(list[0])) : location.assign("transaction.html"));
-    }
+    api.getClientId()
+        .then(client_id => {
+            if(client_id) {
+                http_get_json(api.uri + "/v2/transaction/client/" + encodeURIComponent(client_id))
+                    .then(list => console.log(encodeJson(list)) || list)
+                    .then(list => list.length > 0 ? location.assign("transaction.html#" + encodeURIComponent(list[0])) : location.assign("transaction.html"));
+            }
+        });
 }
 
 function page_initialize(code_hint) {

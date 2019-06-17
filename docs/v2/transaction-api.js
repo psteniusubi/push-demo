@@ -3,30 +3,39 @@ function TransactionAPI(uri) {
     const self = this;
 	this.uri = uri;
     // service worker
-    this.serviceWorker_promise = navigator.serviceWorker.register("/push-demo/v2/worker.js", { scope: "/push-demo/v2/" })
-        .then(reg => console.log("register worker.js " + reg) || reg)
-        .catch(error => log_and_reject("navigator.serviceWorker.register(worker.js)", error));
-    if(this.getClientId()) {
-        // application key        
-        this.keyPair_promise = getKey();
-        // ready?
-        this.ready = this.keyPair_promise
-            .then(() => Promise.resolve(true))
-            .catch(() => Promise.resolve(false));
+    if(navigator.serviceWorker) {
+        this.serviceWorker_promise = navigator.serviceWorker.register("/push-demo/v2/worker.js", { scope: "/push-demo/v2/" })
+            .then(reg => console.log("register worker.js " + reg) || reg)
+            .catch(error => log_and_reject("navigator.serviceWorker.register(worker.js)", error));
     } else {
-        this.ready = Promise.resolve(false);
+        this.serviceWorker_promise = Promise.resolve();
     }
+    // AuthenticatorDB
+    this.db = new AuthenticatorDB();
+    this.clientId = null;
+    this.keyPair = null;
+    this.ready = new Promise((resolve,reject) => {
+        Promise.all([self.db.getClientId(), self.db.getKeyPair(), self.serviceWorker_promise])
+            .then(all => {
+                self.clientId = all[0];
+                self.keyPair = all[1];
+                resolve(true);
+            })
+            .catch(e => console.error("TransactionAPI " + e) || reject());
+    });
 }
 
 TransactionAPI.prototype.getClientId = function() {
-    return localStorage.getItem("client_id");
+    return this.clientId;
 }
 
 TransactionAPI.prototype.getList = function() {
-    const clientId = this.getClientId();
-    if(!clientId) return Promise.reject();
-    return http_get_json(this.uri + "/v2/transaction/client/" + encodeURIComponent(clientId))
-        .catch(() => Promise.reject());
+    return this.ready.then(() => {
+        const clientId = this.getClientId();
+        if(!clientId) return Promise.reject();
+        return http_get_json(this.uri + "/v2/transaction/client/" + encodeURIComponent(clientId))
+            .catch(() => Promise.reject());
+    });
 }
 
 TransactionAPI.prototype.getTransaction = function(push_id) {
@@ -35,12 +44,14 @@ TransactionAPI.prototype.getTransaction = function(push_id) {
 }
 
 TransactionAPI.prototype.createChallenge = function(push_id) {
-	console.log("TransactionAPI.createChallenge()");
-    const clientId = this.getClientId();
-    if(!clientId) return Promise.reject();
-	return http_get_json(this.uri + "/v2/transaction/id/" + encodeURIComponent(push_id))
-		.then(json => console.log("TransactionChallenge " + encodeJson(json)) || json)
-        .catch(() => Promise.reject());
+    return this.ready.then(() => {
+        console.log("TransactionAPI.createChallenge()");
+        const clientId = this.getClientId();
+        if(!clientId) return Promise.reject();
+        return http_get_json(this.uri + "/v2/transaction/id/" + encodeURIComponent(push_id))
+            .then(json => console.log("TransactionChallenge " + encodeJson(json)) || json)
+            .catch(() => Promise.reject());
+    });
 }
 
 TransactionAPI.prototype.confirmChallenge = function(push_id, transaction_challenge) {

@@ -24,7 +24,7 @@
 <script type="text/javascript" src="../base64url.js"></script>
 <script type="text/javascript" src="encoders.js"></script>
 <script type="text/javascript" src="db.js"></script>
-<script type="text/javascript" src="crypto.js"></script>
+<script type="text/javascript" src="authenticator-db.js"></script>
 <script type="text/javascript" src="fetch.js"></script>
 <script type="text/javascript" src="transaction-api.js"></script>
 <script type="text/javascript">
@@ -36,7 +36,7 @@ var api_uri = (location.hostname === "psteniusubi.example.com")
 
 function registration() {
     console.error("registration()");
-	//location.assign("register.html");
+	location.assign("register.html");
 }
 
 // transaction
@@ -181,10 +181,5 @@ api.ready.then(page_initialize);
 </div>
 
 </div>
-<!--
-<p><a href="https://psteniusubi.example.com/push-demo/v2/index.html">index.html</a></p>
-<p class="confirm"><input type="button" id="confirm" value="Confirm" /> <input type="button" id="reject" value="Reject" /></p>
-<p class="polling"><input type="button" id="close" value="Close" /></p>
--->
 </body>
 </html>

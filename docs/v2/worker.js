@@ -80,7 +80,7 @@ self.addEventListener("push", event => {
 	console.log("push " + event);
 	console.log("push.data " + event.data.text());
     var message = event.data.json();
-	var title = "Sign-in request (v2)";
+	var title = "Sign-in request";
 	var body = "Request " + message.binding_message;
 	if(message.client_addr) body += " from " + message.client_addr;
 	if(message.client_name) body += " to " + message.client_name;

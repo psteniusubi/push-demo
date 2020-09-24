@@ -1,32 +1,61 @@
 <!DOCTYPE html>
 <html>
+
 <head>
-<title>psteniusubi.github.io</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<link rel="icon" type="image/png" href="/favicon.png" />
-<style type="text/css">
-body {
-	font-family: sans-serif;
-}
-</style>
-<script type="text/javascript" src="https://code.jquery.com/jquery-3.3.1.js"></script>
-<script type="text/javascript">
-var DOMContentLoaded = new Promise(resolve => window.addEventListener("DOMContentLoaded", () => resolve()));
-DOMContentLoaded.then(() => {
-    if(location.host !== "psteniusubi.github.io") {    
-        if(location.host !== "psteniusubi.example.com") {
-            $("#menu").prepend($("<li>").append($("<a>").attr("href", "https://psteniusubi.example.com/push-demo/v2/index.html").text("psteniusubi.example.com")));
+    <title>Push Notifications</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+    <link rel="stylesheet" type="text/css" href="/css/ubisecure.css" referrerpolicy="no-referrer" />
+    <style type="text/css">
+    </style>
+    <script async type="module">
+        import { parsed } from "/modules/document-promises.js";
+        async function set_button_href_handlers() {
+            await parsed;
+            document.querySelectorAll("button[href]").forEach(i => {
+                i.addEventListener("click", e => {
+                    const name = e.target.getAttribute("target") ?? "_blank";
+                    if("_self" === name) {                        
+                        location.assign(e.target.getAttribute("href"));
+                    } else {
+                        window.open(e.target.getAttribute("href"), name); 
+                    }
+                });
+            });
+        }        
+        async function build_page() {
+            await parsed;
+            await set_button_href_handlers();
         }
-        $("#menu").prepend($("<li>").append($("<a>").attr("href", "https://psteniusubi.github.io/push-demo/v2/index.html").text("psteniusubi.github.io")));
-    }
-});
-</script>
+        build_page();
+    </script>
 </head>
+
 <body>
-<ul id="menu">
-<li><a href="register.html">register.html</a></li>
-<li><a href="transaction.html">transaction.html</a></li>
-<li><a href="unregister.html">unregister.html</a></li>
-</ul>
+
+    <header>
+        <nav>
+            <button class="icon-home" href="/" target="_self">Home</button>
+            <button href="/push-demo/v2" target="_self">Push Demo</button>
+            <button href="https://github.com/psteniusubi/push-demo">Repository</button>
+        </nav>
+        <nav>
+            <button href="https://ubisecure.com" class="ubisecure-standard-logo-h-reverse">&nbsp;</button>
+        </nav>
+    </header>
+
+    <main>
+        <section class="outline">
+            <h1>Push Demo</h1>
+            <div>
+                <ul>
+                    <li><a href="register.html">Register</a></li>
+                    <li><a href="transaction.html">Transaction</a></li>
+                    <li><a href="unregister.html">Un-register</a></li>
+                </ul>
+            </div>
+        </section>
+    </main>
+
 </body>
+
 </html>

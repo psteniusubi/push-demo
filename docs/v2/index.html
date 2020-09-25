@@ -13,7 +13,7 @@
             await parsed;
             document.querySelectorAll("button[href]").forEach(i => {
                 i.addEventListener("click", e => {
-                    const name = e.target.getAttribute("target") ?? "_blank";
+                    const name = e.target.getAttribute("target") || "_blank";
                     if("_self" === name) {                        
                         location.assign(e.target.getAttribute("href"));
                     } else {
